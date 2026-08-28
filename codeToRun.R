@@ -18,7 +18,7 @@
 # Optional: configure proxy if required for internet access
 #
 # Sys.setenv(
-#   https_proxy = "http://"
+#   https_proxy = "https://"
 # )
 #
 # Sys.getenv("https_proxy")
@@ -227,8 +227,14 @@ results <- merge(
   sort = TRUE
 )
 
-# Replace missing counts with zero for cohorts without
-# any matching subjects.
+# ============================================================
+# Replace missing cohort counts with zero
+# ============================================================
+# Cohorts without any matching records are not returned by
+# getCohortCounts(). After merging with all defined cohorts,
+# these missing values are represented as NA and are therefore
+# replaced with 0.
+
 results$cohortEntries[
   is.na(results$cohortEntries)
 ] <- 0
@@ -236,6 +242,27 @@ results$cohortEntries[
 results$cohortSubjects[
   is.na(results$cohortSubjects)
 ] <- 0
+
+
+# ============================================================
+# Apply privacy-preserving display of small cohort counts
+# ============================================================
+# Counts between 1 and 4 are reported as "<5".
+# A count of 0 remains reported as "0".
+# This avoids reporting small patient numbers while preserving
+# the distinction between no patients and fewer than five patients.
+
+results$cohortEntries <- ifelse(
+  results$cohortEntries == 0,
+  "0",
+  ifelse(results$cohortEntries < 5, "<5", as.character(results$cohortEntries))
+)
+
+results$cohortSubjects <- ifelse(
+  results$cohortSubjects == 0,
+  "0",
+  ifelse(results$cohortSubjects < 5, "<5", as.character(results$cohortSubjects))
+)
 
 results
 
