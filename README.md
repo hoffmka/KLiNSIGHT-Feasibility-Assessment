@@ -2,7 +2,7 @@
 
 This repository contains the R-based Study Package for the **KLiNSIGHT study** to assess the feasibility of identifying the study population and relevant clinical data represented in the **OMOP Common Data Model (OMOP CDM)**.
 
-The feasibility assessment is intended for **FDPG / MII sites** and is conducted in the context of **NUM4Rare** and **NUM^OHDSI Connect**.
+The feasibility assessment is intended for **FDPG / NUM / MII community** and is conducted in the context of **NUM4Rare** and **NUM^OHDSI Connect**.
 
 ## Objective
 
@@ -51,6 +51,7 @@ The generated CSV file contains the following information for each study cohort:
 - `cohortName` – name of the cohort
 - `cohortEntries` – number of cohort entries identified
 - `cohortSubjects` – number of unique subjects identified
+- `cohortSubjectsFrom2020` – number of unique subjects with a cohort start date on or after 1 January 2020
 
 Small counts are reported as `<5` to avoid disclosure of small patient numbers. A value of `0` indicates that no subjects were identified for the respective cohort.
 

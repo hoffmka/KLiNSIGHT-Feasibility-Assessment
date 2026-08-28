@@ -205,15 +205,6 @@ results <- CohortGenerator::getCohortCounts(
 # Include cohorts with zero subjects
 # ============================================================
 
-# Get all cohort definitions from the Study Package.
-# This ensures that cohorts with no matching subjects are
-# also included in the final results.
-results <- CohortGenerator::getCohortCounts(
-  connection = conn,
-  cohortDatabaseSchema = cohortDatabaseSchema,
-  cohortTable = cohortTable
-)
-
 # Merge the observed cohort counts with the complete list
 # of defined cohorts.
 allCohorts <- cohortDefinitionSet[, c("cohortId", "cohortName")]
@@ -227,20 +218,49 @@ results <- merge(
   sort = TRUE
 )
 
-# ============================================================
 # Replace missing cohort counts with zero
-# ============================================================
-# Cohorts without any matching records are not returned by
-# getCohortCounts(). After merging with all defined cohorts,
-# these missing values are represented as NA and are therefore
-# replaced with 0.
-
 results$cohortEntries[
   is.na(results$cohortEntries)
 ] <- 0
 
 results$cohortSubjects[
   is.na(results$cohortSubjects)
+] <- 0
+
+# ============================================================
+# Calculate cohort subjects from 2020 onwards
+# ============================================================
+
+studyStartDate <- "2020-01-01"
+
+cohortCountsFrom2020 <- DatabaseConnector::querySql(
+  connection = conn,
+  sql = paste0(
+    "SELECT cohort_definition_id AS cohortId, ",
+    "COUNT(DISTINCT subject_id) AS cohortSubjectsFrom2020 ",
+    "FROM ", cohortDatabaseSchema, ".", cohortTable, " ",
+    "WHERE cohort_start_date >= '", studyStartDate, "' ",
+    "GROUP BY cohort_definition_id"
+  )
+)
+
+# Rename database result columns to match the cohort result structure
+names(cohortCountsFrom2020) <- c(
+  "cohortId",
+  "cohortSubjectsFrom2020"
+)
+
+results <- merge(
+  results,
+  cohortCountsFrom2020,
+  by = "cohortId",
+  all.x = TRUE,
+  sort = TRUE
+)
+
+# Replace missing counts with zero
+results$cohortSubjectsFrom2020[
+  is.na(results$cohortSubjectsFrom2020)
 ] <- 0
 
 # ============================================================
@@ -261,6 +281,12 @@ results$cohortSubjects <- ifelse(
   results$cohortSubjects == 0,
   "0",
   ifelse(results$cohortSubjects < 5, "<5", as.character(results$cohortSubjects))
+)
+
+results$cohortSubjectsFrom2020 <- ifelse(
+  results$cohortSubjectsFrom2020 == 0,
+  "0",
+  ifelse(results$cohortSubjectsFrom2020 < 5, "<5", as.character(results$cohortSubjectsFrom2020))
 )
 
 results
