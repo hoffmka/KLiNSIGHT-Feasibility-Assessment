@@ -19,7 +19,7 @@ The feasibility assessment is performed stepwise in an R environment with access
    If the required packages are not already available, install `DatabaseConnector`, `CirceR`, and `CohortGenerator`. The script contains the corresponding installation commands as comments.
 
 3. **Configure the database connection**  
-   Copy `.env.example` to `.env` and enter the site-specific database configuration for the local OMOP CDM, including the database server, port, username, password, and OMOP CDM and results schemas.
+   Copy `example.env` to `.env` and enter the site-specific database configuration for the local OMOP CDM, including the database server, port, username, password, and OMOP CDM and results schemas.
 
    The `.env` file contains local database credentials and must **not** be committed to the repository.
 

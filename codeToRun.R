@@ -243,7 +243,6 @@ results$cohortSubjects[
   is.na(results$cohortSubjects)
 ] <- 0
 
-
 # ============================================================
 # Apply privacy-preserving display of small cohort counts
 # ============================================================
