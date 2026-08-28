@@ -3,3 +3,6 @@
 
 # Locally generated feasibility results
 output/
+
+# macOS
+.DS_Store
