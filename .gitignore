@@ -1,0 +1,5 @@
+# Configuration file
+.env
+
+# Locally generated feasibility results
+output/
