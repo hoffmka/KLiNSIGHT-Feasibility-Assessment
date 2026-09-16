@@ -147,7 +147,11 @@
     "CriteriaList": [
       {
         "ConditionOccurrence": {
-          "CodesetId": 1
+          "CodesetId": 1,
+          "OccurrenceStartDate": {
+            "Value": "2020-01-01",
+            "Op": "lt"
+          }
         }
       }
     ],
@@ -186,7 +190,6 @@
               },
               "UseEventEnd": false
             },
-            "IgnoreObservationPeriod": true,
             "Occurrence": {
               "Type": 2,
               "Count": 1

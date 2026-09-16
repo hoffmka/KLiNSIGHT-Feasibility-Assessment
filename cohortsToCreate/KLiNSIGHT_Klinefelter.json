@@ -105,7 +105,11 @@
     "CriteriaList": [
       {
         "ConditionOccurrence": {
-          "CodesetId": 1
+          "CodesetId": 1,
+          "OccurrenceStartDate": {
+            "Value": "2020-01-01",
+            "Op": "gte"
+          }
         }
       }
     ],
@@ -123,17 +127,7 @@
   "ExpressionLimit": {
     "Type": "First"
   },
-  "InclusionRules": [
-    {
-      "name": "LH",
-      "expression": {
-        "Type": "ALL",
-        "CriteriaList": [],
-        "DemographicCriteriaList": [],
-        "Groups": []
-      }
-    }
-  ],
+  "InclusionRules": [],
   "CensoringCriteria": [],
   "CollapseSettings": {
     "CollapseType": "ERA",

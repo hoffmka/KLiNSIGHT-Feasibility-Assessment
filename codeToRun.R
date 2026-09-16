@@ -228,42 +228,6 @@ results$cohortSubjects[
 ] <- 0
 
 # ============================================================
-# Calculate cohort subjects from 2020 onwards
-# ============================================================
-
-studyStartDate <- "2020-01-01"
-
-cohortCountsFrom2020 <- DatabaseConnector::querySql(
-  connection = conn,
-  sql = paste0(
-    "SELECT cohort_definition_id AS cohortId, ",
-    "COUNT(DISTINCT subject_id) AS cohortSubjectsFrom2020 ",
-    "FROM ", cohortDatabaseSchema, ".", cohortTable, " ",
-    "WHERE cohort_start_date >= '", studyStartDate, "' ",
-    "GROUP BY cohort_definition_id"
-  )
-)
-
-# Rename database result columns to match the cohort result structure
-names(cohortCountsFrom2020) <- c(
-  "cohortId",
-  "cohortSubjectsFrom2020"
-)
-
-results <- merge(
-  results,
-  cohortCountsFrom2020,
-  by = "cohortId",
-  all.x = TRUE,
-  sort = TRUE
-)
-
-# Replace missing counts with zero
-results$cohortSubjectsFrom2020[
-  is.na(results$cohortSubjectsFrom2020)
-] <- 0
-
-# ============================================================
 # Apply privacy-preserving display of small cohort counts
 # ============================================================
 # Counts between 1 and 4 are reported as "<5".
@@ -281,12 +245,6 @@ results$cohortSubjects <- ifelse(
   results$cohortSubjects == 0,
   "0",
   ifelse(results$cohortSubjects < 5, "<5", as.character(results$cohortSubjects))
-)
-
-results$cohortSubjectsFrom2020 <- ifelse(
-  results$cohortSubjectsFrom2020 == 0,
-  "0",
-  ifelse(results$cohortSubjectsFrom2020 < 5, "<5", as.character(results$cohortSubjectsFrom2020))
 )
 
 results
