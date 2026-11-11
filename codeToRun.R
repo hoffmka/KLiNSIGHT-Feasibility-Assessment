@@ -33,21 +33,14 @@
 
 # Run these commands once to install the required packages.
 #
-# install.packages("DatabaseConnector")
-# install.packages("SqlRender")
-# install.packages("remotes")
-# install.packages("dotenv")
-#
-# install.packages(
-#   "CirceR",
-#   repos = c(
-#     "https://ohdsi.r-universe.dev",
-#     "https://cloud.r-project.org"
-#   )
-# )
-#
-# remotes::install_github("OHDSI/CohortGenerator")
+install.packages("DatabaseConnector")
+install.packages("SqlRender")
+install.packages("remotes")
+install.packages("dotenv")
+install.packages("CirceR")
 
+
+remotes::install_github("OHDSI/CohortGenerator")
 
 # ============================================================
 # Load dependancies
@@ -84,7 +77,7 @@ connectionDetails <- createConnectionDetails(
 cdmDatabaseSchema <- Sys.getenv("CDM_SCHEMA")
 cohortDatabaseSchema <- Sys.getenv("COHORT_SCHEMA")
 cohortDefinitionFolder <- "cohortsToCreate"
-cohortTable <- "klinsight_cohort"
+cohortTable <- "insight_cohort"
 
 # ============================================================
 # Create database connection
@@ -266,7 +259,7 @@ dateStamp <- format(Sys.Date(), "%Y-%m-%d")
 
 outputFile <- file.path(
   outputFolder,
-  paste0("KLiNSIGHT_cohort_results_", dateStamp, ".csv")
+  paste0("INSiGHT_diagnostic_results_", dateStamp, ".csv")
 )
 
 # Export the cohort counts as a CSV file.

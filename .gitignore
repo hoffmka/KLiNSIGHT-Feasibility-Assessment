@@ -6,3 +6,4 @@ output/
 
 # macOS
 .DS_Store
+.Rproj.user
