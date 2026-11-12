@@ -6,4 +6,14 @@ output/
 
 # macOS
 .DS_Store
-.Rproj.user
+
+# RStudio
+.Rhistory
+.Rprofile
+.RData
+.Ruserdata
+.Rproj.user/
+
+# renv: generated libraries and temporary files
+renv/library/
+renv/staging/
