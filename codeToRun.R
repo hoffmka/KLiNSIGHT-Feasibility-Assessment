@@ -46,18 +46,20 @@
 # install.packages("FeatureExtraction")
 # 
 # remotes::install_github("OHDSI/CohortGenerator")
+# remotes::install_github("OHDSI/CohortDiagnostics")
 # 
 # renv::snapshot()
 
 renv::restore()
 
 # ============================================================
-# Load dependancies
+# Load dependencies
 # ============================================================
 
 library(DatabaseConnector)
 library(CirceR)
 library(CohortGenerator)
+library(CohortDiagnostics)
 library(dotenv)
 
 # ============================================================
@@ -103,7 +105,7 @@ studyCohortIds <- list(
   MASCINSIGHT = 2L
 )
 
-#Cohort configuration
+# Cohort configuration
 cohortDefinitionFolder <- "cohortsToCreate"
 cohortTable <- "insight_cohort"
 
@@ -126,20 +128,15 @@ message(sprintf("Active cohorts: %s",
 outputDir <- "output"
 outputPrefix <- "INSiGHT"
 
-outputFolderDiagnostics <- file.path(
-  outputDir, 
-  "Diagnostics"
-)
+outputFolderDiagnostics <- file.path(outputDir, "Diagnostics")
 
-cohortCountsDir <- file.path(
-  outputDir,
-  "cohort_counts"
-)
+cohortCountsDir <- file.path(outputDir, "cohort_counts")
 
-characterizationDir <- file.path(
-  outputDir,
-  "characterization"
-)
+characterizationDir <- file.path(outputDir, "characterization")
+
+# CohortDiagnostics output: written inside characterizationDir so that
+# study-specific diagnostic checks can read from a single root folder.
+cohortDiagnosticsDir <- file.path(characterizationDir, "index_event_breakdown")
 
 # Privacy settings
 suppressSmallCounts <- TRUE
@@ -147,9 +144,9 @@ privacyThreshold <- 5
 
 # Characterization selection
 characterizationSettings <- list(
-  ageGroups = TRUE,
+  ageGroups       = TRUE,
   cohortEntryYear = TRUE,
-  gender = TRUE
+  gender          = TRUE
 )
 
 # ------------------------------------------------------------
@@ -157,37 +154,14 @@ characterizationSettings <- list(
 # ------------------------------------------------------------
 
 dir.create(outputFolderDiagnostics, recursive = TRUE, showWarnings = FALSE)
-dir.create(
-  cohortCountsDir,
-  recursive = TRUE,
-  showWarnings = FALSE
-)
-
-dir.create(
-  characterizationDir,
-  recursive = TRUE,
-  showWarnings = FALSE
-)
+dir.create(cohortCountsDir,         recursive = TRUE, showWarnings = FALSE)
+dir.create(characterizationDir,     recursive = TRUE, showWarnings = FALSE)
 
 # ============================================================
 # Create database connection
 # ============================================================
 
-conn <- DatabaseConnector::connect(
-  connectionDetails
-)
-
-
-source(file.path("R", "00_RunStudyAgnosticDiagnostics.R"))
-
-# --- Study-agnostic diagnostics ------------------------------------------
-studyAgnosticResults <- runStudyAgnosticDiagnostics(
-  connection        = conn,
-  cdmDatabaseSchema = cdmDatabaseSchema,
-  outputFolder      = outputFolderDiagnostics,
-  siteId            = siteId
-)
-
+conn <- DatabaseConnector::connect(connectionDetails)
 
 # ============================================================
 # Generate cohorts
@@ -202,14 +176,30 @@ source("R/01_CreateCohorts.R")
 source("R/02_CohortCounts.R")
 
 # ============================================================
+# Run CohortDiagnostics
+# ============================================================
+
+source("R/03_CohortDiagnostics.R")
+runCohortDiagnostics(
+  cohortDefinitionSet  = cohortDefinitionSet,
+  connectionDetails    = connectionDetails,
+  cdmDatabaseSchema    = cdmDatabaseSchema,
+  cohortDatabaseSchema = cohortDatabaseSchema,
+  cohortTable          = cohortTable,
+  cohortDiagnosticsDir = cohortDiagnosticsDir,
+  siteId               = siteId,
+  privacyThreshold     = privacyThreshold
+)
+
+# ============================================================
 # Run cohort characterization
 # ============================================================
 
 source("R/Characterization/00_RunCharacterization.R")
 
-# ------------------------------------------------------------
+# ============================================================
 # Study-specific diagnostics
-# ------------------------------------------------------------
+# ============================================================
 
 if (studyTarget %in% c("KLINSIGHT", "BOTH")) {
   source(file.path("R", "StudyDiagnostics", "KLiNSIGHT", "00_RunKLiNSIGHTDiagnostics.R"))
@@ -217,7 +207,6 @@ if (studyTarget %in% c("KLINSIGHT", "BOTH")) {
     characterizationDir = characterizationDir,
     outputFolder        = outputFolderDiagnostics,
     siteId              = siteId,
-    obsCoverage         = studyAgnosticResults$obsCoverage,
     privacyThreshold    = privacyThreshold
   )
 }
@@ -225,18 +214,12 @@ if (studyTarget %in% c("KLINSIGHT", "BOTH")) {
 if (studyTarget %in% c("MASCINSIGHT", "BOTH")) {
   # MAScINSIGHT study-specific diagnostics — not yet implemented
   # source(file.path("R", "StudyDiagnostics", "MAScINSIGHT", "00_RunMAScINSIGHTDiagnostics.R"))
-  # mascinsightDiagResults <- runMAScINSIGHTDiagnostics(
-  #   characterizationDir = characterizationDir,
-  #   outputFolder        = outputFolderDiagnostics,
-  #   siteId              = siteId,
-  #   obsCoverage         = studyAgnosticResults$obsCoverage,
-  #   privacyThreshold    = privacyThreshold
-  # )
   message("MAScINSIGHT study-specific diagnostics: not yet implemented.")
 }
 
+# ============================================================
 # Close database connection
+# ============================================================
+
 DatabaseConnector::disconnect(conn)
-
 message("Database connection closed.")
-

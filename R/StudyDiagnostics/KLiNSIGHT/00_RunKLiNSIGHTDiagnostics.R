@@ -52,6 +52,12 @@ runKLiNSIGHTDiagnostics <- function(characterizationDir,
       siteId              = siteId,
       cohortId            = cohortId,
       checkDate           = checkDate
+    ),
+    runKLiNSIGHTIndexDiagnosisDistribution(
+      characterizationDir = characterizationDir,
+      siteId              = siteId,
+      cohortId            = cohortId,
+      checkDate           = checkDate
     )
     # Further checks will be added here as they are built
   )
