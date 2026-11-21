@@ -10,7 +10,8 @@
 #
 # Parameters
 # ----------
-# characterizationDir : folder containing characterization CSVs
+# characterizationDir  : folder containing characterization CSVs
+# cohortDiagnosticsDir : folder containing CohortDiagnostics exports
 # outputFolder        : folder for diagnostic result CSV
 # siteId              : site identifier from .env / SITE_ID
 # cohortId            : cohort_definition_id for KLiNSIGHT (default 1)
@@ -18,6 +19,7 @@
 # ============================================================
 
 runKLiNSIGHTDiagnostics <- function(characterizationDir,
+                                     cohortDiagnosticsDir,
                                      outputFolder,
                                      siteId,
                                      obsCoverage      = NULL,
@@ -54,10 +56,10 @@ runKLiNSIGHTDiagnostics <- function(characterizationDir,
       checkDate           = checkDate
     ),
     runKLiNSIGHTIndexDiagnosisDistribution(
-      characterizationDir = characterizationDir,
-      siteId              = siteId,
-      cohortId            = cohortId,
-      checkDate           = checkDate
+      cohortDiagnosticsDir = cohortDiagnosticsDir,
+      siteId               = siteId,
+      cohortId             = cohortId,
+      checkDate            = checkDate
     )
     # Further checks will be added here as they are built
   )

@@ -134,9 +134,7 @@ cohortCountsDir <- file.path(outputDir, "cohort_counts")
 
 characterizationDir <- file.path(outputDir, "characterization")
 
-# CohortDiagnostics output: written inside characterizationDir so that
-# study-specific diagnostic checks can read from a single root folder.
-cohortDiagnosticsDir <- file.path(characterizationDir, "index_event_breakdown")
+cohortDiagnosticsDir <- file.path(outputDir, "cohort_diagnostics")
 
 # Privacy settings
 suppressSmallCounts <- TRUE
@@ -156,6 +154,7 @@ characterizationSettings <- list(
 dir.create(outputFolderDiagnostics, recursive = TRUE, showWarnings = FALSE)
 dir.create(cohortCountsDir,         recursive = TRUE, showWarnings = FALSE)
 dir.create(characterizationDir,     recursive = TRUE, showWarnings = FALSE)
+dir.create(cohortDiagnosticsDir,    recursive = TRUE, showWarnings = FALSE)
 
 # ============================================================
 # Create database connection
@@ -204,10 +203,11 @@ source("R/Characterization/00_RunCharacterization.R")
 if (studyTarget %in% c("KLINSIGHT", "BOTH")) {
   source(file.path("R", "StudyDiagnostics", "KLiNSIGHT", "00_RunKLiNSIGHTDiagnostics.R"))
   klinsightDiagResults <- runKLiNSIGHTDiagnostics(
-    characterizationDir = characterizationDir,
-    outputFolder        = outputFolderDiagnostics,
-    siteId              = siteId,
-    privacyThreshold    = privacyThreshold
+    characterizationDir  = characterizationDir,
+    cohortDiagnosticsDir = cohortDiagnosticsDir,
+    outputFolder         = outputFolderDiagnostics,
+    siteId               = siteId,
+    privacyThreshold     = privacyThreshold
   )
 }
 

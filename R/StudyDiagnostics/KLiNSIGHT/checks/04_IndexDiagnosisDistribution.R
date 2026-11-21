@@ -4,7 +4,7 @@
 # ============================================================
 #
 # Reads the CohortDiagnostics index-event breakdown
-# (produced by R/Characterization/05_IndexEventBreakdown.R)
+# (produced by R/03_CohortDiagnostics.R, exported to cohortDiagnosticsDir)
 # and checks whether the concepts that triggered KLiNSIGHT
 # cohort entry are consistent with Klinefelter syndrome.
 #
@@ -25,7 +25,7 @@
 #     Always PASS — informational only.
 # ============================================================
 
-runKLiNSIGHTIndexDiagnosisDistribution <- function(characterizationDir,
+runKLiNSIGHTIndexDiagnosisDistribution <- function(cohortDiagnosticsDir,
                                                      siteId,
                                                      cohortId  = 1L,
                                                      checkDate = as.character(Sys.Date())) {
@@ -33,12 +33,10 @@ runKLiNSIGHTIndexDiagnosisDistribution <- function(characterizationDir,
   ParallelLogger::logInfo("  [KLiNSIGHT] Checking index diagnosis distribution...")
 
   # --- 1. Locate breakdown CSV and concept lookup ----------------------
-  breakdownDir <- file.path(characterizationDir, "index_event_breakdown")
-
-  # CohortDiagnostics (current versions) writes index_event_breakdown.csv
-  # alongside a concept.csv that holds names, codes and vocabulary ids.
-  csvPath     <- file.path(breakdownDir, "index_event_breakdown.csv")
-  conceptPath <- file.path(breakdownDir, "concept.csv")
+  # CohortDiagnostics exports index_event_breakdown.csv and concept.csv
+  # directly into cohortDiagnosticsDir.
+  csvPath     <- file.path(cohortDiagnosticsDir, "index_event_breakdown.csv")
+  conceptPath <- file.path(cohortDiagnosticsDir, "concept.csv")
 
   if (!file.exists(csvPath)) {
     noFile <- data.frame(
@@ -49,8 +47,8 @@ runKLiNSIGHTIndexDiagnosisDistribution <- function(characterizationDir,
       CHECK_LEVEL = c("PLAUSIBILITY", "CHARACTERIZATION"),
       STATUS      = "FAIL",
       VALUE       = NA_character_,
-      MESSAGE     = paste0("index_event_breakdown.csv not found in ", breakdownDir,
-                           ". Run R/Characterization/05_IndexEventBreakdown.R first.")
+      MESSAGE     = paste0("index_event_breakdown.csv not found in ", cohortDiagnosticsDir,
+                           ". Run R/03_CohortDiagnostics.R first.")
     )
     return(noFile)
   }
