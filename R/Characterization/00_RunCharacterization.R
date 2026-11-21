@@ -66,6 +66,16 @@ if (isTRUE(characterizationSettings$cohortEntryYear)) {
 }
 
 
+if (isTRUE(characterizationSettings$gender)) {
+
+  message("\nRunning: Demographics - Gender")
+
+  source(
+    "R/Characterization/03_Gender.R"
+  )
+}
+
+
 # ------------------------------------------------------------
 # 3. Completion
 # ------------------------------------------------------------

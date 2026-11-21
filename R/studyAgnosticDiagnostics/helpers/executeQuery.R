@@ -15,20 +15,20 @@ executeQuery <- function(
     c(sql = sql, warnOnMissingParameters = FALSE, list(...))
   )
   sql <- SqlRender::translate(sql, targetDialect = connection@dbms)
-  
+
   result   <- NULL
   duration <- -1
   errorFile <- file.path(outputFolder,
                          paste0(tools::file_path_sans_ext(basename(sqlFilePath)), "Err.txt"))
-  
+
   tryCatch({
     t0 <- Sys.time()
-    
+
     if (useExecuteSql) {
       DatabaseConnector::executeSql(
-        connection       = connection,
-        sql              = sql,
-        errorReportFile  = errorFile,
+        connection        = connection,
+        sql               = sql,
+        errorReportFile   = errorFile,
         reportOverallTime = FALSE
       )
     } else {
@@ -39,7 +39,7 @@ executeQuery <- function(
       )
       names(result) <- toupper(names(result))   # DatabaseConnector v7 compatibility
     }
-    
+
     duration <- as.numeric(difftime(Sys.time(), t0), units = "secs")
     msg <- successMessage %||% sprintf("'%s' executed successfully", basename(sqlFilePath))
     ParallelLogger::logInfo(sprintf("> %s in %.2f secs", msg, duration))
@@ -48,7 +48,7 @@ executeQuery <- function(
     ParallelLogger::logError(e)
     ParallelLogger::logError(sprintf("> Query failed. See '%s'", errorFile))
   })
-  
+
   list(result = result, duration = duration)
 }
 

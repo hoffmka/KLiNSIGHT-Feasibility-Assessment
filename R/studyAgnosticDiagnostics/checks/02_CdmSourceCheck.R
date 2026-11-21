@@ -1,8 +1,9 @@
 runCdmSourceCheck <- function(connection, cdmDatabaseSchema, outputFolder, siteId) {
 
-  sqlDir <- file.path("sql", "sql_server")
 
   ParallelLogger::logInfo("Running CDM source check...")
+
+  sqlDir <- file.path("sql", "sql_server")
 
   cdmSource <- executeQuery(
     sqlFilePath       = file.path(sqlDir, "cdm_source.sql"),

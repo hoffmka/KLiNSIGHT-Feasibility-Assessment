@@ -1,8 +1,9 @@
 runVocabCheck <- function(connection, cdmDatabaseSchema, outputFolder, siteId) {
 
-  sqlDir <- file.path("sql", "sql_server")
 
   ParallelLogger::logInfo("Running vocabulary check...")
+
+  sqlDir <- file.path("sql", "sql_server")
 
   vocabCounts <- executeQuery(
     sqlFilePath       = file.path(sqlDir, "vocab_versions.sql"),

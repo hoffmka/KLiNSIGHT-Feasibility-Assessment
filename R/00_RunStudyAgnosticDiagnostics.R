@@ -25,16 +25,18 @@ runStudyAgnosticDiagnostics <- function(connection, cdmDatabaseSchema, outputFol
 
   cdmResults   <- runCdmSourceCheck(connection, cdmDatabaseSchema, outputFolder, siteId)
   vocabResults <- runVocabCheck(connection, cdmDatabaseSchema, outputFolder, siteId)
+  obsResults   <- runObservationPeriodCoverageCheck(connection, cdmDatabaseSchema, outputFolder, siteId)
 
-  allChecks <- rbind(cdmResults$checks, vocabResults$checks)
+  allChecks <- rbind(cdmResults$checks, vocabResults$checks, obsResults$checks)
 
   outFile <- file.path(outputFolder, "INSiGHT_studyAgnostic_diagnostics.csv")
   write.csv(allChecks, outFile, row.names = FALSE)
-  ParallelLogger::logInfo(sprintf("Level 1 diagnostics written to %s", outFile))
+  ParallelLogger::logInfo(sprintf("Study-agnostic diagnostics written to %s", outFile))
 
   invisible(list(
     cdmVersion   = cdmResults$cdmVersion,
     orphaPresent = vocabResults$orphaPresent,
+    obsCoverage  = obsResults$obsCoverage,
     checks       = allChecks
   ))
 }

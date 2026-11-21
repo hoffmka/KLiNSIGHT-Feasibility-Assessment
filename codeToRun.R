@@ -98,7 +98,10 @@ cohortSettings <- read.csv(
 outputDir <- "output"
 outputPrefix <- "INSiGHT"
 
-outputFolderDiagnostics <- file.path(outputDir, "studyAgnosticDiagnostics")
+outputFolderDiagnostics <- file.path(
+  outputDir, 
+  "studyAgnosticDiagnostics"
+)
 
 cohortCountsDir <- file.path(
   outputDir,
@@ -117,7 +120,8 @@ privacyThreshold <- 5
 # Characterization selection
 characterizationSettings <- list(
   ageGroups = TRUE,
-  cohortEntryYear = TRUE
+  cohortEntryYear = TRUE,
+  gender = TRUE
 )
 
 # ------------------------------------------------------------
@@ -148,13 +152,14 @@ conn <- DatabaseConnector::connect(
 
 source(file.path("R", "00_RunStudyAgnosticDiagnostics.R"))
 
-# --- Level 1 diagnostics (study-agnostic metadata checks) ----------------
+# --- Study-agnostic diagnostics ------------------------------------------
 studyAgnosticResults <- runStudyAgnosticDiagnostics(
   connection        = conn,
   cdmDatabaseSchema = cdmDatabaseSchema,
   outputFolder      = outputFolderDiagnostics,
   siteId            = siteId
 )
+
 
 # ============================================================
 # Generate cohorts
@@ -173,6 +178,20 @@ source("R/02_CohortCounts.R")
 # ============================================================
 
 source("R/Characterization/00_RunCharacterization.R")
+
+# ------------------------------------------------------------
+# KLiNSIGHT study-specific diagnostics
+# ------------------------------------------------------------
+
+source(file.path("R", "StudyDiagnostics", "KLiNSIGHT", "00_RunKLiNSIGHTDiagnostics.R"))
+
+klinsightDiagResults <- runKLiNSIGHTDiagnostics(
+  characterizationDir = characterizationDir,
+  outputFolder        = outputFolderDiagnostics,
+  siteId              = siteId,
+  obsCoverage         = studyAgnosticResults$obsCoverage,
+  privacyThreshold    = privacyThreshold
+)
 
 # Close database connection
 DatabaseConnector::disconnect(conn)
