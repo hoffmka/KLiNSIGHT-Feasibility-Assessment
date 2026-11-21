@@ -21,12 +21,12 @@
 #   source(file.path("R", "explore_unmapped_source_codes.R"))
 #
 #   # Single cohort
-#   meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 1L)
-#   drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 1L)
+#   meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 5L)
+#   drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 5L)
 #
 #   # All cohorts defined in cohortsToCreate/Cohorts.csv
-#   meas <- getUnmappedMeasurements(minCount = 1L)
-#   drug <- getUnmappedDrugExposures(minCount = 1L)
+#   meas <- getUnmappedMeasurements(minCount = 5L)
+#   drug <- getUnmappedDrugExposures(minCount = 5L)
 #
 # Parameters (shared by both functions)
 # --------------------------------------
@@ -35,8 +35,8 @@
 #   cohortTable        : cohort table name; default: env COHORT_TABLE or
 #                        "insight_cohort"
 #   minCount           : suppress rows with n_persons < minCount
-#                        (use 5 for privacy-compliant output;
-#                         use 1 for internal exploration)
+#                        default: 5 (privacy-compliant);
+#                        use 1 only for internal exploration
 #   outputFile         : optional CSV path; output includes cohort_id /
 #                        cohort_name columns when multiple cohorts are queried
 # ============================================================
@@ -97,7 +97,7 @@
 # ================================================================
 getUnmappedMeasurements <- function(cohortDefinitionId = NULL,
                                      cohortTable        = NULL,
-                                     minCount           = 1L,
+                                     minCount           = 5L,
                                      outputFile         = NULL) {
   # cohortDefinitionId: single integer, integer vector, or NULL (= all cohorts)
   cohortIds   <- .resolveCohortIds(cohortDefinitionId)
@@ -197,7 +197,7 @@ ORDER BY n_persons DESC, n_measurements DESC
 # ================================================================
 getUnmappedDrugExposures <- function(cohortDefinitionId = NULL,
                                       cohortTable        = NULL,
-                                      minCount           = 1L,
+                                      minCount           = 5L,
                                       outputFile         = NULL) {
   # cohortDefinitionId: single integer, integer vector, or NULL (= all cohorts)
   cohortIds   <- .resolveCohortIds(cohortDefinitionId)
@@ -297,11 +297,11 @@ ORDER BY n_persons DESC, n_exposures DESC
 # source(file.path("R", "explore_unmapped_source_codes.R"))
 #
 # # All cohorts defined in cohortsToCreate/Cohorts.csv:
-# meas <- getUnmappedMeasurements(minCount = 1L)
-# drug <- getUnmappedDrugExposures(minCount = 1L)
+# meas <- getUnmappedMeasurements(minCount = 5L)
+# drug <- getUnmappedDrugExposures(minCount = 5L)
 #
 # # Single cohort, write to CSV:
-# meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 1L,
+# meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 5L,
 #           outputFile = file.path("output", "klinsight_unmapped_measurements.csv"))
-# drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 1L,
+# drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 5L,
 #           outputFile = file.path("output", "klinsight_unmapped_drugs.csv"))
