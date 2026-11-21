@@ -48,7 +48,7 @@ getUnmappedMeasurements <- function(cohortDefinitionId = 1L,
     port         = as.integer(Sys.getenv("DB_PORT")),
     user         = Sys.getenv("DB_USER"),
     password     = Sys.getenv("DB_PASSWORD"),
-    pathToDriver = Sys.getenv("DB_PRIVER")
+    pathToDriver = Sys.getenv("DB_PATHTODRIVER")
   )
 
   connection <- DatabaseConnector::connect(connectionDetails)
