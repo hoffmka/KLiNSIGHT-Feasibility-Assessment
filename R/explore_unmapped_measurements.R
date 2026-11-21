@@ -20,21 +20,29 @@
 # ----------------------------------------------------------
 #   source(file.path("R", "explore_unmapped_measurements.R"))
 #
+#   # Single cohort
 #   meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 1L)
 #   drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 1L)
 #
+#   # All cohorts defined in cohortsToCreate/Cohorts.csv
+#   meas <- getUnmappedMeasurements(minCount = 1L)
+#   drug <- getUnmappedDrugExposures(minCount = 1L)
+#
 # Parameters (shared by both functions)
 # --------------------------------------
-#   cohortDefinitionId : cohort_definition_id (1 = KLiNSIGHT basic cohort)
-#   cohortTable        : cohort table name; default: "insight_cohort"
-#                        (overridden by COHORT_TABLE in .env if set)
+#   cohortDefinitionId : integer or integer vector of cohort IDs, or NULL
+#                        (NULL = all cohorts from cohortsToCreate/Cohorts.csv)
+#   cohortTable        : cohort table name; default: env COHORT_TABLE or
+#                        "insight_cohort"
 #   minCount           : suppress rows with n_persons < minCount
 #                        (use 5 for privacy-compliant output;
 #                         use 1 for internal exploration)
-#   outputFile         : optional CSV path
+#   outputFile         : optional CSV path; output includes cohort_id /
+#                        cohort_name columns when multiple cohorts are queried
 # ============================================================
 
-# ---- Shared helper: connect from .env ----------------------------
+# ---- Shared helpers --------------------------------------------------
+
 .connectFromEnv <- function() {
   if (!requireNamespace("dotenv", quietly = TRUE))
     stop("Package 'dotenv' required. Install with: install.packages('dotenv')")
@@ -58,31 +66,47 @@
     cohortTable
 }
 
+# Returns a named character vector: names = cohortId (as character),
+# values = cohortName.  Reads cohortsToCreate/Cohorts.csv.
+.loadCohortRegistry <- function() {
+  csvPath <- file.path("cohortsToCreate", "Cohorts.csv")
+  if (!file.exists(csvPath))
+    stop("cohortsToCreate/Cohorts.csv not found — run from repository root")
+  reg <- read.csv(csvPath, stringsAsFactors = FALSE)
+  stats::setNames(reg$cohortName, as.character(reg$cohortId))
+}
+
+# Resolve cohortDefinitionId:
+#   NULL           -> all IDs from Cohorts.csv
+#   integer/vector -> as supplied, with names from registry (or fallback)
+.resolveCohortIds <- function(cohortDefinitionId) {
+  reg <- .loadCohortRegistry()
+  if (is.null(cohortDefinitionId)) {
+    return(list(ids = as.integer(names(reg)), names = unname(reg)))
+  }
+  ids <- as.integer(cohortDefinitionId)
+  nms <- sapply(ids, function(i) {
+    n <- reg[as.character(i)]
+    if (length(n) == 0 || is.na(n)) paste0("cohort_", i) else n
+  })
+  list(ids = ids, names = nms)
+}
+
 # ================================================================
 # getUnmappedMeasurements
 # ================================================================
-getUnmappedMeasurements <- function(cohortDefinitionId = 1L,
+getUnmappedMeasurements <- function(cohortDefinitionId = NULL,
                                      cohortTable        = NULL,
                                      minCount           = 1L,
                                      outputFile         = NULL) {
-
-  cohortTable  <- .defaultCohortTable(cohortTable)
-  connection   <- .connectFromEnv()
+  # cohortDefinitionId: single integer, integer vector, or NULL (= all cohorts)
+  cohortIds   <- .resolveCohortIds(cohortDefinitionId)
+  cohortTable <- .defaultCohortTable(cohortTable)
+  connection  <- .connectFromEnv()
   on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
   cdmSchema    <- Sys.getenv("CDM_SCHEMA")
   cohortSchema <- Sys.getenv("COHORT_SCHEMA")
-
-  # Sanity check
-  total <- DatabaseConnector::renderTranslateQuerySql(connection,
-    "SELECT COUNT(*) AS n FROM @cdm_schema.measurement m
-     INNER JOIN @cohort_schema.@cohort_table c
-       ON m.person_id = c.subject_id AND c.cohort_definition_id = @cohort_id",
-    cdm_schema = cdmSchema, cohort_schema = cohortSchema,
-    cohort_table = cohortTable, cohort_id = cohortDefinitionId,
-    snakeCaseToCamelCase = FALSE)
-  message(sprintf("Total measurement records for cohort %d: %s",
-                  cohortDefinitionId, format(total$n, big.mark = ",")))
 
   sql <- "
 SELECT
@@ -113,56 +137,76 @@ HAVING COUNT(DISTINCT m.person_id) >= @min_count
 ORDER BY n_persons DESC, n_measurements DESC
 "
 
-  message(sprintf("Querying unmapped measurements (cohort %d, min persons: %d)...",
-                  cohortDefinitionId, minCount))
+  allResults <- lapply(seq_along(cohortIds$ids), function(i) {
+    cohortId   <- cohortIds$ids[i]
+    cohortName <- cohortIds$names[i]
 
-  result <- DatabaseConnector::renderTranslateQuerySql(connection, sql,
-    cdm_schema = cdmSchema, cohort_schema = cohortSchema,
-    cohort_table = cohortTable, cohort_id = cohortDefinitionId,
-    min_count = minCount, snakeCaseToCamelCase = FALSE)
+    # Sanity check: total measurement records for this cohort
+    total <- DatabaseConnector::renderTranslateQuerySql(connection,
+      "SELECT COUNT(*) AS n FROM @cdm_schema.measurement m
+       INNER JOIN @cohort_schema.@cohort_table c
+         ON m.person_id = c.subject_id AND c.cohort_definition_id = @cohort_id",
+      cdm_schema = cdmSchema, cohort_schema = cohortSchema,
+      cohort_table = cohortTable, cohort_id = cohortId,
+      snakeCaseToCamelCase = FALSE)
+    message(sprintf("[%s] Total measurement records: %s",
+                    cohortName, format(total$n, big.mark = ",")))
 
-  if (nrow(result) == 0) {
-    message(sprintf(
-      "No unmapped measurements found for cohort %d.\n  All %s records carry a standard OMOP concept.",
-      cohortDefinitionId, format(total$n, big.mark = ",")))
-    return(invisible(result))
+    if (total$n == 0) {
+      message(sprintf("  Skipping cohort %d — no measurement records.", cohortId))
+      return(NULL)
+    }
+
+    message(sprintf("  Querying unmapped measurements (min persons: %d)...", minCount))
+
+    result <- DatabaseConnector::renderTranslateQuerySql(connection, sql,
+      cdm_schema = cdmSchema, cohort_schema = cohortSchema,
+      cohort_table = cohortTable, cohort_id = cohortId,
+      min_count = minCount, snakeCaseToCamelCase = FALSE)
+
+    if (nrow(result) == 0) {
+      message(sprintf(
+        "  No unmapped measurements found.\n  All %s records carry a standard OMOP concept.",
+        format(total$n, big.mark = ",")))
+      return(NULL)
+    }
+
+    message(sprintf("  Found %d distinct unmapped source value(s).", nrow(result)))
+    result$cohort_id   <- cohortId
+    result$cohort_name <- cohortName
+    result
+  })
+
+  combined <- do.call(rbind, Filter(Negate(is.null), allResults))
+  if (is.null(combined)) {
+    message("No unmapped measurements found across all queried cohorts.")
+    combined <- data.frame()
   }
 
-  message(sprintf("Found %d distinct unmapped source value(s).", nrow(result)))
-
-  if (!is.null(outputFile)) {
+  if (!is.null(outputFile) && nrow(combined) > 0) {
     dir.create(dirname(outputFile), recursive = TRUE, showWarnings = FALSE)
-    write.csv(result, outputFile, row.names = FALSE)
+    write.csv(combined, outputFile, row.names = FALSE)
     message(sprintf("Written to %s", outputFile))
   }
-  invisible(result)
+
+  invisible(combined)
 }
 
 # ================================================================
 # getUnmappedDrugExposures
 # ================================================================
-getUnmappedDrugExposures <- function(cohortDefinitionId = 1L,
+getUnmappedDrugExposures <- function(cohortDefinitionId = NULL,
                                       cohortTable        = NULL,
                                       minCount           = 1L,
                                       outputFile         = NULL) {
-
-  cohortTable  <- .defaultCohortTable(cohortTable)
-  connection   <- .connectFromEnv()
+  # cohortDefinitionId: single integer, integer vector, or NULL (= all cohorts)
+  cohortIds   <- .resolveCohortIds(cohortDefinitionId)
+  cohortTable <- .defaultCohortTable(cohortTable)
+  connection  <- .connectFromEnv()
   on.exit(DatabaseConnector::disconnect(connection), add = TRUE)
 
   cdmSchema    <- Sys.getenv("CDM_SCHEMA")
   cohortSchema <- Sys.getenv("COHORT_SCHEMA")
-
-  # Sanity check
-  total <- DatabaseConnector::renderTranslateQuerySql(connection,
-    "SELECT COUNT(*) AS n FROM @cdm_schema.drug_exposure de
-     INNER JOIN @cohort_schema.@cohort_table c
-       ON de.person_id = c.subject_id AND c.cohort_definition_id = @cohort_id",
-    cdm_schema = cdmSchema, cohort_schema = cohortSchema,
-    cohort_table = cohortTable, cohort_id = cohortDefinitionId,
-    snakeCaseToCamelCase = FALSE)
-  message(sprintf("Total drug_exposure records for cohort %d: %s",
-                  cohortDefinitionId, format(total$n, big.mark = ",")))
 
   sql <- "
 SELECT
@@ -178,7 +222,7 @@ FROM @cdm_schema.drug_exposure de
 INNER JOIN @cohort_schema.@cohort_table c
   ON  de.person_id           = c.subject_id
   AND c.cohort_definition_id = @cohort_id
--- Try to resolve source_value as RxNorm or ATC code
+-- Try to resolve source_value as an RxNorm or ATC code
 LEFT JOIN @cdm_schema.concept cv
   ON  cv.concept_code     = de.drug_source_value
   AND cv.vocabulary_id    IN ('RxNorm', 'RxNorm Extension', 'ATC')
@@ -193,38 +237,71 @@ HAVING COUNT(DISTINCT de.person_id) >= @min_count
 ORDER BY n_persons DESC, n_exposures DESC
 "
 
-  message(sprintf("Querying unmapped drug exposures (cohort %d, min persons: %d)...",
-                  cohortDefinitionId, minCount))
+  allResults <- lapply(seq_along(cohortIds$ids), function(i) {
+    cohortId   <- cohortIds$ids[i]
+    cohortName <- cohortIds$names[i]
 
-  result <- DatabaseConnector::renderTranslateQuerySql(connection, sql,
-    cdm_schema = cdmSchema, cohort_schema = cohortSchema,
-    cohort_table = cohortTable, cohort_id = cohortDefinitionId,
-    min_count = minCount, snakeCaseToCamelCase = FALSE)
+    total <- DatabaseConnector::renderTranslateQuerySql(connection,
+      "SELECT COUNT(*) AS n FROM @cdm_schema.drug_exposure de
+       INNER JOIN @cohort_schema.@cohort_table c
+         ON de.person_id = c.subject_id AND c.cohort_definition_id = @cohort_id",
+      cdm_schema = cdmSchema, cohort_schema = cohortSchema,
+      cohort_table = cohortTable, cohort_id = cohortId,
+      snakeCaseToCamelCase = FALSE)
+    message(sprintf("[%s] Total drug_exposure records: %s",
+                    cohortName, format(total$n, big.mark = ",")))
 
-  if (nrow(result) == 0) {
-    message(sprintf(
-      "No unmapped drug exposures found for cohort %d.\n  All %s records carry a standard OMOP concept.",
-      cohortDefinitionId, format(total$n, big.mark = ",")))
-    return(invisible(result))
+    if (total$n == 0) {
+      message(sprintf("  Skipping cohort %d — no drug_exposure records.", cohortId))
+      return(NULL)
+    }
+
+    message(sprintf("  Querying unmapped drug exposures (min persons: %d)...", minCount))
+
+    result <- DatabaseConnector::renderTranslateQuerySql(connection, sql,
+      cdm_schema = cdmSchema, cohort_schema = cohortSchema,
+      cohort_table = cohortTable, cohort_id = cohortId,
+      min_count = minCount, snakeCaseToCamelCase = FALSE)
+
+    if (nrow(result) == 0) {
+      message(sprintf(
+        "  No unmapped drug exposures found.\n  All %s records carry a standard OMOP concept.",
+        format(total$n, big.mark = ",")))
+      return(NULL)
+    }
+
+    message(sprintf("  Found %d distinct unmapped drug source value(s).", nrow(result)))
+    result$cohort_id   <- cohortId
+    result$cohort_name <- cohortName
+    result
+  })
+
+  combined <- do.call(rbind, Filter(Negate(is.null), allResults))
+  if (is.null(combined)) {
+    message("No unmapped drug exposures found across all queried cohorts.")
+    combined <- data.frame()
   }
 
-  message(sprintf("Found %d distinct unmapped drug source value(s).", nrow(result)))
-
-  if (!is.null(outputFile)) {
+  if (!is.null(outputFile) && nrow(combined) > 0) {
     dir.create(dirname(outputFile), recursive = TRUE, showWarnings = FALSE)
-    write.csv(result, outputFile, row.names = FALSE)
+    write.csv(combined, outputFile, row.names = FALSE)
     message(sprintf("Written to %s", outputFile))
   }
-  invisible(result)
+
+  invisible(combined)
 }
 
 # ================================================================
-# Convenience: run both at once
+# Example usage
 # ================================================================
 # source(file.path("R", "explore_unmapped_measurements.R"))
 #
+# # All cohorts defined in cohortsToCreate/Cohorts.csv:
+# meas <- getUnmappedMeasurements(minCount = 1L)
+# drug <- getUnmappedDrugExposures(minCount = 1L)
+#
+# # Single cohort, write to CSV:
 # meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 1L,
 #           outputFile = file.path("output", "klinsight_unmapped_measurements.csv"))
-#
 # drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 1L,
 #           outputFile = file.path("output", "klinsight_unmapped_drugs.csv"))
