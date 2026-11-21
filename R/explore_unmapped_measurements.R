@@ -12,6 +12,10 @@
 # CohortDiagnostics temporal characterization, they may still
 # exist in the measurement table under source codes only.
 #
+# A result of 0 rows means all measurement records for this cohort
+# already carry a standard OMOP concept (measurement_concept_id > 0)
+# — which is the best possible outcome.
+#
 # Usage
 # -----
 # Run interactively from the repository root after codeToRun.R
@@ -19,7 +23,6 @@
 #
 #   source(file.path("R", "explore_unmapped_measurements.R"))
 #   unmapped <- getUnmappedMeasurements(cohortDefinitionId = 1L)
-#   View(unmapped)
 #
 # Parameters
 # ----------
@@ -57,11 +60,26 @@ getUnmappedMeasurements <- function(cohortDefinitionId = 1L,
   cdmSchema    <- Sys.getenv("CDM_SCHEMA")
   cohortSchema <- Sys.getenv("COHORT_SCHEMA")
 
-  # ---- Query -----------------------------------------------------------
-  # Returns one row per distinct (source_value, unit_source_value) pair.
-  # n_persons   : number of distinct patients with this measurement source value
-  # n_measurements : total number of measurement records
-  # first_date / last_date : temporal range of the measurement in the cohort
+  # ---- Sanity check: how many measurements exist for this cohort? ----
+  sqlTotal <- "
+SELECT COUNT(*) AS n_total
+FROM @cdm_schema.measurement m
+INNER JOIN @cohort_schema.cohort c
+  ON  m.person_id            = c.subject_id
+  AND c.cohort_definition_id = @cohort_id
+"
+  total <- DatabaseConnector::renderTranslateQuerySql(
+    connection           = connection,
+    sql                  = sqlTotal,
+    cdm_schema           = cdmSchema,
+    cohort_schema        = cohortSchema,
+    cohort_id            = cohortDefinitionId,
+    snakeCaseToCamelCase = FALSE
+  )
+  message(sprintf("Total measurement records for cohort %d: %s",
+                  cohortDefinitionId, format(total$n_total, big.mark = ",")))
+
+  # ---- Main query: unmapped only -------------------------------------
   sql <- "
 SELECT
   m.measurement_source_value,
@@ -97,22 +115,31 @@ ORDER BY n_persons DESC, n_measurements DESC
     snakeCaseToCamelCase = FALSE
   )
 
+  if (nrow(result) == 0) {
+    message(sprintf(
+      paste0("No unmapped measurements found (measurement_concept_id = 0) for cohort %d.\n",
+             "  All %s measurement records carry a standard OMOP concept — no ETL gap detected."),
+      cohortDefinitionId,
+      format(total$n_total, big.mark = ",")
+    ))
+    return(invisible(result))
+  }
+
   message(sprintf("Found %d distinct source value / unit combinations.", nrow(result)))
 
-  # ---- Convenience: flag likely KS-relevant labs ----------------------
+  # ---- Flag KS-relevant source patterns ------------------------------
   ksPatterns <- c(
-    "testoster" = "Testosterone",
-    "fsh"       = "FSH",
-    "follitrop" = "FSH",
-    "lh\\b"     = "LH",
-    "lutrop"    = "LH",
-    "lutroph"   = "LH",
-    "tsh"       = "TSH",
-    "thyrotropin" = "TSH",
-    "amh"       = "AMH",
-    "inhibin"   = "Inhibin",
-    "estradiol" = "Estradiol",
-    "prolactin" = "Prolactin"
+    "testoster"  = "Testosterone",
+    "fsh"        = "FSH",
+    "follitrop"  = "FSH",
+    "\\blh\\b"   = "LH",
+    "lutrop"     = "LH",
+    "\\btsh\\b"  = "TSH",
+    "thyrotropin"= "TSH",
+    "amh"        = "AMH",
+    "inhibin"    = "Inhibin",
+    "estradiol"  = "Estradiol",
+    "prolactin"  = "Prolactin"
   )
 
   result$ks_relevant_lab <- NA_character_
@@ -121,7 +148,7 @@ ORDER BY n_persons DESC, n_measurements DESC
     result$ks_relevant_lab[hits & is.na(result$ks_relevant_lab)] <- ksPatterns[[pat]]
   }
 
-  # ---- Output ----------------------------------------------------------
+  # ---- Output --------------------------------------------------------
   if (!is.null(outputFile)) {
     dir.create(dirname(outputFile), recursive = TRUE, showWarnings = FALSE)
     write.csv(result, outputFile, row.names = FALSE)
@@ -139,7 +166,6 @@ ORDER BY n_persons DESC, n_measurements DESC
 #   minCount           = 1L,
 #   outputFile         = file.path("output", "klinsight_unmapped_measurements.csv")
 # )
-# View(unmapped)
 #
 # KS-relevante Werte filtern:
 # unmapped[!is.na(unmapped$ks_relevant_lab), ]
