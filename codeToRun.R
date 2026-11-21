@@ -81,9 +81,27 @@ connectionDetails <- createConnectionDetails(
   pathToDriver = Sys.getenv("DB_PATHTODRIVER")
 )
 
-siteId           <- Sys.getenv("SITE_ID")
-cdmDatabaseSchema <- Sys.getenv("CDM_SCHEMA")
+siteId               <- Sys.getenv("SITE_ID")
+cdmDatabaseSchema    <- Sys.getenv("CDM_SCHEMA")
 cohortDatabaseSchema <- Sys.getenv("COHORT_SCHEMA")
+
+# Study target — controls cohort generation, characterization,
+# and study-specific diagnostics.
+# Valid values: "KLINSIGHT" | "MASCINSIGHT" | "BOTH"
+studyTarget <- toupper(trimws(Sys.getenv("STUDY_TARGET", unset = "BOTH")))
+if (!studyTarget %in% c("KLINSIGHT", "MASCINSIGHT", "BOTH")) {
+  stop(sprintf(
+    "Invalid STUDY_TARGET '%s' in .env. Must be KLINSIGHT, MASCINSIGHT, or BOTH.",
+    studyTarget
+  ))
+}
+message(sprintf("Study target: %s", studyTarget))
+
+# Map study names to cohort IDs (matches cohortsToCreate/Cohorts.csv)
+studyCohortIds <- list(
+  KLINSIGHT   = 1L,
+  MASCINSIGHT = 2L
+)
 
 #Cohort configuration
 cohortDefinitionFolder <- "cohortsToCreate"
@@ -94,13 +112,23 @@ cohortSettings <- read.csv(
   stringsAsFactors = FALSE
 )
 
+# Keep only cohorts belonging to the selected study
+activeCohortIds <- if (studyTarget == "BOTH") {
+  unlist(studyCohortIds, use.names = FALSE)
+} else {
+  studyCohortIds[[studyTarget]]
+}
+cohortSettings <- cohortSettings[cohortSettings$cohortId %in% activeCohortIds, ]
+message(sprintf("Active cohorts: %s",
+                paste(cohortSettings$cohortName, collapse = ", ")))
+
 # Output configuration
 outputDir <- "output"
 outputPrefix <- "INSiGHT"
 
 outputFolderDiagnostics <- file.path(
   outputDir, 
-  "studyAgnosticDiagnostics"
+  "Diagnostics"
 )
 
 cohortCountsDir <- file.path(
@@ -180,18 +208,32 @@ source("R/02_CohortCounts.R")
 source("R/Characterization/00_RunCharacterization.R")
 
 # ------------------------------------------------------------
-# KLiNSIGHT study-specific diagnostics
+# Study-specific diagnostics
 # ------------------------------------------------------------
 
-source(file.path("R", "StudyDiagnostics", "KLiNSIGHT", "00_RunKLiNSIGHTDiagnostics.R"))
+if (studyTarget %in% c("KLINSIGHT", "BOTH")) {
+  source(file.path("R", "StudyDiagnostics", "KLiNSIGHT", "00_RunKLiNSIGHTDiagnostics.R"))
+  klinsightDiagResults <- runKLiNSIGHTDiagnostics(
+    characterizationDir = characterizationDir,
+    outputFolder        = outputFolderDiagnostics,
+    siteId              = siteId,
+    obsCoverage         = studyAgnosticResults$obsCoverage,
+    privacyThreshold    = privacyThreshold
+  )
+}
 
-klinsightDiagResults <- runKLiNSIGHTDiagnostics(
-  characterizationDir = characterizationDir,
-  outputFolder        = outputFolderDiagnostics,
-  siteId              = siteId,
-  obsCoverage         = studyAgnosticResults$obsCoverage,
-  privacyThreshold    = privacyThreshold
-)
+if (studyTarget %in% c("MASCINSIGHT", "BOTH")) {
+  # MAScINSIGHT study-specific diagnostics — not yet implemented
+  # source(file.path("R", "StudyDiagnostics", "MAScINSIGHT", "00_RunMAScINSIGHTDiagnostics.R"))
+  # mascinsightDiagResults <- runMAScINSIGHTDiagnostics(
+  #   characterizationDir = characterizationDir,
+  #   outputFolder        = outputFolderDiagnostics,
+  #   siteId              = siteId,
+  #   obsCoverage         = studyAgnosticResults$obsCoverage,
+  #   privacyThreshold    = privacyThreshold
+  # )
+  message("MAScINSIGHT study-specific diagnostics: not yet implemented.")
+}
 
 # Close database connection
 DatabaseConnector::disconnect(conn)
