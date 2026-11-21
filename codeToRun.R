@@ -81,6 +81,7 @@ connectionDetails <- createConnectionDetails(
   pathToDriver = Sys.getenv("DB_PATHTODRIVER")
 )
 
+siteId           <- Sys.getenv("SITE_ID")
 cdmDatabaseSchema <- Sys.getenv("CDM_SCHEMA")
 cohortDatabaseSchema <- Sys.getenv("COHORT_SCHEMA")
 
@@ -96,6 +97,8 @@ cohortSettings <- read.csv(
 # Output configuration
 outputDir <- "output"
 outputPrefix <- "INSiGHT"
+
+outputFolderDiagnostics <- file.path(outputDir, "studyAgnosticDiagnostics")
 
 cohortCountsDir <- file.path(
   outputDir,
@@ -121,6 +124,7 @@ characterizationSettings <- list(
 # Create output directories
 # ------------------------------------------------------------
 
+dir.create(outputFolderDiagnostics, recursive = TRUE, showWarnings = FALSE)
 dir.create(
   cohortCountsDir,
   recursive = TRUE,
@@ -141,8 +145,16 @@ conn <- DatabaseConnector::connect(
   connectionDetails
 )
 
-cat("Connected to database.\n")
 
+source(file.path("R", "00_RunStudyAgnosticDiagnostics.R"))
+
+# --- Level 1 diagnostics (study-agnostic metadata checks) ----------------
+studyAgnosticResults <- runStudyAgnosticDiagnostics(
+  connection        = conn,
+  cdmDatabaseSchema = cdmDatabaseSchema,
+  outputFolder      = outputFolderDiagnostics,
+  siteId            = siteId
+)
 
 # ============================================================
 # Generate cohorts
