@@ -36,6 +36,7 @@
 # ============================================================
 
 getUnmappedMeasurements <- function(cohortDefinitionId = 1L,
+                                     cohortTable        = NULL,
                                      minCount           = 1L,
                                      outputFile         = NULL) {
 
@@ -44,6 +45,10 @@ getUnmappedMeasurements <- function(cohortDefinitionId = 1L,
     stop("Package 'dotenv' is required. Install with: install.packages('dotenv')")
   }
   dotenv::load_dot_env(".env")
+
+  if (is.null(cohortTable)) {
+    cohortTable <- Sys.getenv("COHORT_TABLE", unset = "insight_cohort")
+  }
 
   connectionDetails <- DatabaseConnector::createConnectionDetails(
     dbms         = Sys.getenv("DB_DBMS"),
@@ -64,7 +69,7 @@ getUnmappedMeasurements <- function(cohortDefinitionId = 1L,
   sqlTotal <- "
 SELECT COUNT(*) AS n_total
 FROM @cdm_schema.measurement m
-INNER JOIN @cohort_schema.cohort c
+INNER JOIN @cohort_schema.@cohort_table c
   ON  m.person_id            = c.subject_id
   AND c.cohort_definition_id = @cohort_id
 "
@@ -73,6 +78,7 @@ INNER JOIN @cohort_schema.cohort c
     sql                  = sqlTotal,
     cdm_schema           = cdmSchema,
     cohort_schema        = cohortSchema,
+    cohort_table         = cohortTable,
     cohort_id            = cohortDefinitionId,
     snakeCaseToCamelCase = FALSE
   )
@@ -89,7 +95,7 @@ SELECT
   MIN(m.measurement_date)      AS first_date,
   MAX(m.measurement_date)      AS last_date
 FROM @cdm_schema.measurement m
-INNER JOIN @cohort_schema.cohort c
+INNER JOIN @cohort_schema.@cohort_table c
   ON  m.person_id            = c.subject_id
   AND c.cohort_definition_id = @cohort_id
 WHERE m.measurement_concept_id = 0
@@ -110,6 +116,7 @@ ORDER BY n_persons DESC, n_measurements DESC
     sql                  = sql,
     cdm_schema           = cdmSchema,
     cohort_schema        = cohortSchema,
+    cohort_table         = cohortTable,
     cohort_id            = cohortDefinitionId,
     min_count            = minCount,
     snakeCaseToCamelCase = FALSE
