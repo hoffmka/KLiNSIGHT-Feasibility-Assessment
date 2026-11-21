@@ -132,20 +132,11 @@ outputFolderDiagnostics <- file.path(outputDir, "Diagnostics")
 
 cohortCountsDir <- file.path(outputDir, "cohort_counts")
 
-characterizationDir <- file.path(outputDir, "characterization")
-
 cohortDiagnosticsDir <- file.path(outputDir, "cohort_diagnostics")
 
 # Privacy settings
 suppressSmallCounts <- TRUE
 privacyThreshold <- 5
-
-# Characterization selection
-characterizationSettings <- list(
-  ageGroups       = TRUE,
-  cohortEntryYear = TRUE,
-  gender          = TRUE
-)
 
 # ------------------------------------------------------------
 # Create output directories
@@ -153,7 +144,6 @@ characterizationSettings <- list(
 
 dir.create(outputFolderDiagnostics, recursive = TRUE, showWarnings = FALSE)
 dir.create(cohortCountsDir,         recursive = TRUE, showWarnings = FALSE)
-dir.create(characterizationDir,     recursive = TRUE, showWarnings = FALSE)
 dir.create(cohortDiagnosticsDir,    recursive = TRUE, showWarnings = FALSE)
 
 # ============================================================
@@ -191,33 +181,20 @@ runCohortDiagnostics(
 )
 
 
-# Einmalig: SQLite-DB aus dem ZIP bauen
-CohortDiagnostics::preMergeDiagnosticsFiles(
-  dataFolder = "output/cohort_diagnostics",   # Ordner mit Results_UMD.zip
-  sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
-)
-
-# Richtige Funktion für eure CohortDiagnostics-Version:
-CohortDiagnostics::createMergedResultsFile(
-  dataFolder   = "output/cohort_diagnostics",
-  sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
-)
-
-# Shiny Explorer starten
-CohortDiagnostics::launchDiagnosticsExplorer(
-  sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
-)
-
+# # Build SQLite-DB from ZIP
+# CohortDiagnostics::preMergeDiagnosticsFiles(
+#   dataFolder = "output/cohort_diagnostics",
+#   sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
+# )
+# 
+# # Start Shiny Explorer
+# CohortDiagnostics::launchDiagnosticsExplorer(
+#   sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
+# )
 
 
 # ============================================================
-# Run cohort characterization (later in Study package?)
-# ============================================================
-
-# source("R/Characterization/00_RunCharacterization.R")
-
-# ============================================================
-# Study-specific diagnostics
+# Custom diagnostics
 # ============================================================
 
 if (studyTarget %in% c("KLINSIGHT", "BOTH")) {
@@ -234,6 +211,20 @@ if (studyTarget %in% c("MASCINSIGHT", "BOTH")) {
   # source(file.path("R", "StudyDiagnostics", "MAScINSIGHT", "00_RunMAScINSIGHTDiagnostics.R"))
   message("MAScINSIGHT study-specific diagnostics: not yet implemented.")
 }
+
+
+# Check if measurements and drugs are not mapped to standard concepts (concept_id=0 within the cohorts)
+source(file.path("R", "explore_unmapped_source_codes.R"))
+
+# All cohorts (from Cohorts.csv):
+meas <- getUnmappedMeasurements()
+drug <- getUnmappedDrugExposures()
+
+# Single cohort, write directly to CSV:
+meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 1L,
+                                outputFile = file.path("output", "unmapped_measurements.csv"))
+drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 1L,
+                                 outputFile = file.path("output", "unmapped_drugs.csv"))
 
 # ============================================================
 # Close database connection
