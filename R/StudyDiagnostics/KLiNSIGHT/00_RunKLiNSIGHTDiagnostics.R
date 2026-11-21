@@ -53,6 +53,12 @@ runKLiNSIGHTDiagnostics <- function(cohortDiagnosticsDir,
       siteId               = siteId,
       cohortId             = cohortId,
       checkDate            = checkDate
+    ),
+    runKLiNSIGHTLabAvailability(
+      cohortDiagnosticsDir = cohortDiagnosticsDir,
+      siteId               = siteId,
+      cohortId             = cohortId,
+      checkDate            = checkDate
     )
     # Further checks will be added here as they are built
   )
