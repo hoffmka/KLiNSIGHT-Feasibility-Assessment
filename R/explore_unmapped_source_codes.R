@@ -18,7 +18,7 @@
 #
 # Usage (from repository root, after codeToRun.R has run):
 # ----------------------------------------------------------
-#   source(file.path("R", "explore_unmapped_measurements.R"))
+#   source(file.path("R", "explore_unmapped_source_codes.R"))
 #
 #   # Single cohort
 #   meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 1L)
@@ -294,7 +294,7 @@ ORDER BY n_persons DESC, n_exposures DESC
 # ================================================================
 # Example usage
 # ================================================================
-# source(file.path("R", "explore_unmapped_measurements.R"))
+# source(file.path("R", "explore_unmapped_source_codes.R"))
 #
 # # All cohorts defined in cohortsToCreate/Cohorts.csv:
 # meas <- getUnmappedMeasurements(minCount = 1L)
