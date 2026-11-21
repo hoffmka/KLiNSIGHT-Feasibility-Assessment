@@ -3,28 +3,22 @@
 # ============================================================
 #
 # Runs all study-specific plausibility checks for KLiNSIGHT.
-# Checks read from characterization output where possible
-# (FeatureExtraction results) rather than querying the DB
-# directly — consistent with the OHDSI characterize-first,
-# then-check pattern.
+# All checks read exclusively from CohortDiagnostics output
+# (incidence_rate.csv, cohort_overlap.csv, etc.) — no
+# separate characterization run is required.
 #
 # Parameters
 # ----------
-# characterizationDir  : folder containing characterization CSVs
 # cohortDiagnosticsDir : folder containing CohortDiagnostics exports
-# outputFolder        : folder for diagnostic result CSV
-# siteId              : site identifier from .env / SITE_ID
-# cohortId            : cohort_definition_id for KLiNSIGHT (default 1)
-# privacyThreshold    : small-cell suppression threshold (default 5)
+# outputFolder         : folder for diagnostic result CSV
+# siteId               : site identifier from .env / SITE_ID
+# cohortId             : cohort_definition_id for KLiNSIGHT (default 1)
 # ============================================================
 
-runKLiNSIGHTDiagnostics <- function(characterizationDir,
-                                     cohortDiagnosticsDir,
+runKLiNSIGHTDiagnostics <- function(cohortDiagnosticsDir,
                                      outputFolder,
                                      siteId,
-                                     obsCoverage      = NULL,
-                                     cohortId         = 1L,
-                                     privacyThreshold = 5L) {
+                                     cohortId = 1L) {
 
   checkDir <- file.path("R", "StudyDiagnostics", "KLiNSIGHT", "checks")
   for (f in sort(list.files(checkDir, pattern = "\\.R$", full.names = TRUE))) {
@@ -37,23 +31,22 @@ runKLiNSIGHTDiagnostics <- function(characterizationDir,
 
   checks <- rbind(
     runKLiNSIGHTGenderPlausibility(
-      characterizationDir = characterizationDir,
-      siteId              = siteId,
-      cohortId            = cohortId,
-      checkDate           = checkDate
+      cohortDiagnosticsDir = cohortDiagnosticsDir,
+      siteId               = siteId,
+      cohortId             = cohortId,
+      checkDate            = checkDate
     ),
     runKLiNSIGHTCohortEntryYearPlausibility(
-      characterizationDir = characterizationDir,
-      obsCoverage         = obsCoverage,
-      siteId              = siteId,
-      cohortId            = cohortId,
-      checkDate           = checkDate
+      cohortDiagnosticsDir = cohortDiagnosticsDir,
+      siteId               = siteId,
+      cohortId             = cohortId,
+      checkDate            = checkDate
     ),
     runKLiNSIGHTAgeGroupPlausibility(
-      characterizationDir = characterizationDir,
-      siteId              = siteId,
-      cohortId            = cohortId,
-      checkDate           = checkDate
+      cohortDiagnosticsDir = cohortDiagnosticsDir,
+      siteId               = siteId,
+      cohortId             = cohortId,
+      checkDate            = checkDate
     ),
     runKLiNSIGHTIndexDiagnosisDistribution(
       cohortDiagnosticsDir = cohortDiagnosticsDir,

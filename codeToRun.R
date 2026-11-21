@@ -190,11 +190,31 @@ runCohortDiagnostics(
   privacyThreshold     = privacyThreshold
 )
 
+
+# Einmalig: SQLite-DB aus dem ZIP bauen
+CohortDiagnostics::preMergeDiagnosticsFiles(
+  dataFolder = "output/cohort_diagnostics",   # Ordner mit Results_UMD.zip
+  sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
+)
+
+# Richtige Funktion für eure CohortDiagnostics-Version:
+CohortDiagnostics::createMergedResultsFile(
+  dataFolder   = "output/cohort_diagnostics",
+  sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
+)
+
+# Shiny Explorer starten
+CohortDiagnostics::launchDiagnosticsExplorer(
+  sqliteDbPath = "output/cohort_diagnostics/diagnostics_merged.sqlite"
+)
+
+
+
 # ============================================================
-# Run cohort characterization
+# Run cohort characterization (later in Study package?)
 # ============================================================
 
-source("R/Characterization/00_RunCharacterization.R")
+# source("R/Characterization/00_RunCharacterization.R")
 
 # ============================================================
 # Study-specific diagnostics
@@ -203,11 +223,9 @@ source("R/Characterization/00_RunCharacterization.R")
 if (studyTarget %in% c("KLINSIGHT", "BOTH")) {
   source(file.path("R", "StudyDiagnostics", "KLiNSIGHT", "00_RunKLiNSIGHTDiagnostics.R"))
   klinsightDiagResults <- runKLiNSIGHTDiagnostics(
-    characterizationDir  = characterizationDir,
     cohortDiagnosticsDir = cohortDiagnosticsDir,
     outputFolder         = outputFolderDiagnostics,
-    siteId               = siteId,
-    privacyThreshold     = privacyThreshold
+    siteId               = siteId
   )
 }
 

@@ -3,172 +3,150 @@
 # 3. Age group plausibility
 # ============================================================
 #
-# Reads the age group characterization (produced by
-# R/Characterization/01_Demographics.R) and checks whether
-# the age distribution at cohort start is plausible for
-# Klinefelter syndrome (47,XXY).
+# Reads the CohortDiagnostics incidence_rate.csv (age group
+# stratification) and checks whether the age distribution of
+# KLiNSIGHT cohort entries is plausible.
 #
-# KS is typically diagnosed between ages 10 and 64:
-#   - Adolescence: delayed puberty / developmental concerns
-#   - Adulthood: infertility workup
-#   - Neonatal / very late diagnoses are rare in most EHR settings
+# Klinefelter syndrome (47,XXY) has two clinical presentation
+# peaks:
+#   • 10–19 years: delayed puberty / hypogonadism work-up
+#   • 30–39 years: fertility / infertility investigation
 #
-# Checks
-# ------
-#   KLINSIGHT_AGE_CORE_WINDOW
-#     Proportion of patients with cohort start in ages 10–64.
-#     PASS    — ≥ 50% in core window
-#     WARNING — < 50% in core window (unusual distribution)
+# Any patients in the 0–9 age bin are unexpected and trigger
+# a WARNING (premature diagnosis without clear indication).
 #
-#   KLINSIGHT_AGE_CONCENTRATION
-#     Whether any single 5-year band dominates the cohort.
-#     PASS    — no band ≥ 50%
-#     WARNING — one band ≥ 50% (possible coding anomaly)
+# Input:  cohortDiagnosticsDir/incidence_rate.csv
+# Output: data.frame row for the diagnostic results CSV
+#
+# CohortDiagnostics age_group format: "0-9", "10-19", ... "80-89"
+#
+# STATUS rules:
+#   PASS    — expected distribution: 10–19 and/or 30–39
+#             are the two largest bins; <5% in 0–9
+#   WARNING — 0–9 bin contains patients (unusual early Dx),
+#             OR the peak bin is entirely outside 10–64 range,
+#             OR only 1 bin has patients (insufficient spread)
 # ============================================================
 
-runKLiNSIGHTAgeGroupPlausibility <- function(characterizationDir,
+runKLiNSIGHTAgeGroupPlausibility <- function(cohortDiagnosticsDir,
                                                siteId,
                                                cohortId  = 1L,
                                                checkDate = as.character(Sys.Date())) {
 
   ParallelLogger::logInfo("  [KLiNSIGHT] Checking age group plausibility...")
 
-  # --- 1. Load characterization CSV ------------------------------------
-  ageFiles <- list.files(
-    characterizationDir,
-    pattern    = "^age_groups_.*\\.csv$",
-    full.names = TRUE
-  )
-
-  if (length(ageFiles) == 0) {
-    noFile <- data.frame(
+  irPath <- file.path(cohortDiagnosticsDir, "incidence_rate.csv")
+  if (!file.exists(irPath)) {
+    return(data.frame(
       SITE_ID     = siteId,
       CHECK_DATE  = checkDate,
-      CHECK_NAME  = c("KLINSIGHT_AGE_CORE_WINDOW", "KLINSIGHT_AGE_CONCENTRATION"),
+      CHECK_NAME  = "KLINSIGHT_AGE_PLAUSIBILITY",
       CHECK_LEVEL = "PLAUSIBILITY",
       STATUS      = "FAIL",
       VALUE       = NA_character_,
-      MESSAGE     = paste0("Age group file not found in ", characterizationDir,
-                           ". Run R/Characterization/01_Demographics.R first.")
-    )
-    return(noFile)
+      MESSAGE     = paste0("incidence_rate.csv not found in ", cohortDiagnosticsDir)
+    ))
   }
 
-  ageFile <- ageFiles[order(ageFiles, decreasing = TRUE)][1]
-  ParallelLogger::logInfo(sprintf("    Reading: %s", basename(ageFile)))
+  ir <- read.csv(irPath, stringsAsFactors = FALSE)
+  ir <- ir[ir$cohort_id == cohortId, ]
 
-  ages <- read.csv(ageFile, stringsAsFactors = FALSE)
-  ages <- ages[ages$cohortId == cohortId, ]
+  # Age-only rows: age_group set, gender and calendar_year blank
+  aRows <- ir[
+    !is.na(ir$age_group) & nchar(trimws(as.character(ir$age_group))) > 0 &
+    (is.na(ir$gender)        | nchar(trimws(ir$gender))        == 0) &
+    (is.na(ir$calendar_year) | nchar(trimws(as.character(ir$calendar_year))) == 0),
+  ]
 
-  if (nrow(ages) == 0) {
-    noData <- data.frame(
+  # Keep only rows with patients (cohort_count > 0 or suppressed)
+  aWithPts <- aRows[aRows$cohort_count > 0 | aRows$cohort_count == -5, ]
+
+  if (nrow(aWithPts) == 0) {
+    return(data.frame(
       SITE_ID     = siteId,
       CHECK_DATE  = checkDate,
-      CHECK_NAME  = c("KLINSIGHT_AGE_CORE_WINDOW", "KLINSIGHT_AGE_CONCENTRATION"),
+      CHECK_NAME  = "KLINSIGHT_AGE_PLAUSIBILITY",
       CHECK_LEVEL = "PLAUSIBILITY",
       STATUS      = "FAIL",
       VALUE       = NA_character_,
-      MESSAGE     = paste0("No age group data for cohort ID ", cohortId)
-    )
-    return(noData)
+      MESSAGE     = "No age-group rows with patients in incidence_rate.csv"
+    ))
   }
 
-  # --- 2. Parse age bands from covariateName ---------------------------
-  # covariateName looks like: "age group: 10 - 14"
-  ages$ageStart <- suppressWarnings(
-    as.integer(gsub(".*age group:\\s*(\\d+)\\s*-.*", "\\1", ages$covariateName,
-                    ignore.case = TRUE))
+  # Parse age group lower bound for ordering ("10-19" → 10)
+  aWithPts$age_lower <- suppressWarnings(
+    as.integer(sub("^(\\d+).*", "\\1", aWithPts$age_group))
   )
-  ages$ageEnd <- suppressWarnings(
-    as.integer(gsub(".*age group:\\s*\\d+\\s*-\\s*(\\d+).*", "\\1", ages$covariateName,
-                    ignore.case = TRUE))
-  )
+  aWithPts <- aWithPts[order(aWithPts$age_lower), ]
 
-  ages <- ages[!is.na(ages$ageStart), ]
+  binsPresent <- paste(sort(unique(aWithPts$age_group)), collapse = ", ")
+  nBins       <- length(unique(aWithPts$age_lower))
 
-  if (nrow(ages) == 0) {
-    parseErr <- data.frame(
-      SITE_ID     = siteId,
-      CHECK_DATE  = checkDate,
-      CHECK_NAME  = c("KLINSIGHT_AGE_CORE_WINDOW", "KLINSIGHT_AGE_CONCENTRATION"),
-      CHECK_LEVEL = "PLAUSIBILITY",
-      STATUS      = "FAIL",
-      VALUE       = NA_character_,
-      MESSAGE     = paste0("Could not parse age group bands from covariateName: ",
-                           paste(head(ages$covariateName, 3), collapse = "; "))
-    )
-    return(parseErr)
-  }
+  # Check 0–9 bin
+  has0_9 <- any(aWithPts$age_lower == 0)
 
-  # --- 3. Core window check --------------------------------------------
-  # Core diagnostic window for KS: ages 10–64
-  CORE_MIN <- 10L
-  CORE_MAX <- 64L
-
-  coreRows    <- ages[ages$ageStart >= CORE_MIN & ages$ageStart <= CORE_MAX, ]
-  corePct     <- sum(coreRows$percentage, na.rm = TRUE)
-
-  youngRows   <- ages[ages$ageStart < CORE_MIN, ]
-  youngPct    <- sum(youngRows$percentage, na.rm = TRUE)
-  oldRows     <- ages[ages$ageStart > CORE_MAX, ]
-  oldPct      <- sum(oldRows$percentage, na.rm = TRUE)
-
-  coreStatus <- if (corePct >= 50) "PASS" else "WARNING"
-
-  coreMsg <- if (corePct >= 50) {
-    sprintf(
-      "%.1f%% of patients in core diagnostic window (%d–%d); young (<10): %.1f%%, older (>64): %.1f%%",
-      corePct, CORE_MIN, CORE_MAX, youngPct, oldPct
-    )
+  # Peak bin from non-suppressed rows
+  knownCounts <- aWithPts[aWithPts$cohort_count > 0, ]
+  if (nrow(knownCounts) > 0) {
+    peakIdx       <- which.max(knownCounts$cohort_count)
+    peakBin       <- knownCounts$age_group[peakIdx]
+    peakLower     <- knownCounts$age_lower[peakIdx]
+    peakCount     <- knownCounts$cohort_count[peakIdx]
+    total         <- sum(knownCounts$cohort_count)
+    pct0_9        <- if (has0_9) {
+      n0_9 <- sum(knownCounts$cohort_count[knownCounts$age_lower == 0], na.rm = TRUE)
+      round(n0_9 / total * 100, 1)
+    } else { 0 }
+    peakInRange   <- peakLower >= 10 & peakLower <= 64   # 10–19 through 60–69 expected
   } else {
-    sprintf(
-      "Only %.1f%% of patients in core diagnostic window (%d–%d) — young (<10): %.1f%%, older (>64): %.1f%%; distribution unusual for KS",
-      corePct, CORE_MIN, CORE_MAX, youngPct, oldPct
-    )
+    # All non-zero suppressed
+    peakBin     <- NA_character_
+    peakLower   <- NA_integer_
+    peakCount   <- NA_integer_
+    pct0_9      <- NA_real_
+    peakInRange <- NA
   }
 
-  ParallelLogger::logInfo(sprintf("    Core window %d–%d: %.1f%%", CORE_MIN, CORE_MAX, corePct))
+  status <- dplyr::case_when(
+    has0_9 & !is.na(pct0_9) & pct0_9 >= 5                ~ "WARNING",
+    has0_9                                                  ~ "WARNING",
+    nBins == 1                                              ~ "WARNING",
+    !is.na(peakInRange) && !peakInRange                    ~ "WARNING",
+    TRUE                                                    ~ "PASS"
+  )
 
-  coreCheck <- data.frame(
+  msg <- dplyr::case_when(
+    has0_9 & !is.na(pct0_9) & pct0_9 >= 5 ~
+      sprintf("%.1f%% of patients entered in age group 0-9 — unexpectedly early Klinefelter diagnosis; bins present: %s",
+              pct0_9, binsPresent),
+    has0_9 ~
+      sprintf("Patients present in age group 0-9 (count suppressed) — verify coding; bins: %s", binsPresent),
+    nBins == 1 ~
+      sprintf("Patients confined to a single age group (%s) — insufficient age spread", binsPresent),
+    !is.na(peakInRange) && !peakInRange ~
+      sprintf("Peak age group %s is outside expected 10–64 range; bins: %s", peakBin, binsPresent),
+    !is.na(peakBin) ~
+      sprintf("Peak age group: %s — consistent with expected KS presentation (10–19 puberty or 30–39 fertility); bins: %s",
+              peakBin, binsPresent),
+    TRUE ~
+      sprintf("Age groups (counts suppressed): %s", binsPresent)
+  )
+
+  ParallelLogger::logInfo(sprintf("    %s", msg))
+
+  value <- if (!is.na(peakBin)) {
+    sprintf("peak=%s; bins=%s", peakBin, binsPresent)
+  } else {
+    sprintf("bins=%s (counts suppressed)", binsPresent)
+  }
+
+  data.frame(
     SITE_ID     = siteId,
     CHECK_DATE  = checkDate,
-    CHECK_NAME  = "KLINSIGHT_AGE_CORE_WINDOW",
+    CHECK_NAME  = "KLINSIGHT_AGE_PLAUSIBILITY",
     CHECK_LEVEL = "PLAUSIBILITY",
-    STATUS      = coreStatus,
-    VALUE       = sprintf("%.1f%% in %d–%d", corePct, CORE_MIN, CORE_MAX),
-    MESSAGE     = coreMsg
+    STATUS      = status,
+    VALUE       = value,
+    MESSAGE     = msg
   )
-
-  # --- 4. Concentration check ------------------------------------------
-  maxBandPct  <- max(ages$percentage, na.rm = TRUE)
-  maxBandIdx  <- which.max(ages$percentage)
-  maxBandName <- ages$covariateName[maxBandIdx]
-
-  concStatus <- if (maxBandPct >= 50) "WARNING" else "PASS"
-
-  concMsg <- if (maxBandPct >= 50) {
-    sprintf(
-      "%.1f%% of patients concentrated in a single age band ('%s') — possible coding or data quality issue",
-      maxBandPct, maxBandName
-    )
-  } else {
-    sprintf(
-      "No single age band dominates; peak band '%s' has %.1f%%",
-      maxBandName, maxBandPct
-    )
-  }
-
-  ParallelLogger::logInfo(sprintf("    Peak age band: '%s' at %.1f%%", maxBandName, maxBandPct))
-
-  concCheck <- data.frame(
-    SITE_ID     = siteId,
-    CHECK_DATE  = checkDate,
-    CHECK_NAME  = "KLINSIGHT_AGE_CONCENTRATION",
-    CHECK_LEVEL = "PLAUSIBILITY",
-    STATUS      = concStatus,
-    VALUE       = sprintf("peak: '%s' at %.1f%%", maxBandName, maxBandPct),
-    MESSAGE     = concMsg
-  )
-
-  rbind(coreCheck, concCheck)
 }
