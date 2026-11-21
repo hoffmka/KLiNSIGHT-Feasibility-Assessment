@@ -2,10 +2,9 @@
 # CohortDiagnostics — standalone runner
 # ============================================================
 #
-# Wraps CohortDiagnostics::executeDiagnostics() with the
-# INSiGHT-specific set of enabled modules (index event
-# breakdown only).  Called directly from codeToRun.R after
-# cohort creation.
+# Wraps CohortDiagnostics::executeDiagnostics() with all
+# relevant modules enabled for INSiGHT feasibility assessment.
+# Called directly from codeToRun.R after cohort creation.
 #
 # Parameters
 # ----------
@@ -40,7 +39,7 @@ runCohortDiagnostics <- function(cohortDefinitionSet,
 
   dir.create(cohortDiagnosticsDir, recursive = TRUE, showWarnings = FALSE)
 
-  message("\nRunning: CohortDiagnostics (index event breakdown)")
+  message("\nRunning: CohortDiagnostics")
 
   CohortDiagnostics::executeDiagnostics(
     cohortDefinitionSet               = cohortDefinitionSet,
@@ -51,10 +50,10 @@ runCohortDiagnostics <- function(cohortDefinitionSet,
     exportFolder                      = cohortDiagnosticsDir,
     databaseId                        = siteId,
     runBreakdownIndexEvents           = TRUE,
-    runInclusionStatistics            = FALSE,
-    runTemporalCohortCharacterization = FALSE,
-    runIncidenceRate                  = FALSE,
-    runOrphanConcepts                 = FALSE,
+    runInclusionStatistics            = TRUE,
+    runTemporalCohortCharacterization = TRUE,
+    runIncidenceRate                  = TRUE,
+    runOrphanConcepts                 = TRUE,
     minCellCount                      = privacyThreshold
   )
 
