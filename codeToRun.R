@@ -101,8 +101,8 @@ message(sprintf("Study target: %s", studyTarget))
 
 # Map study names to cohort IDs (matches cohortsToCreate/Cohorts.csv)
 studyCohortIds <- list(
-  KLINSIGHT   = 1L,
-  MASCINSIGHT = 2L
+  KLINSIGHT   = c(1L, 2L, 3L),  # KLiNSIGHT_basicCohort, _2020plus, _2020plus_labortrt
+  MASCINSIGHT = c(4L, 5L)        # MAScINSIGHT_basicCohort, _2020plus
 )
 
 # Cohort configuration
@@ -179,7 +179,6 @@ runCohortDiagnostics(
   siteId               = siteId,
   privacyThreshold     = privacyThreshold
 )
-
 
 # # Build SQLite-DB from ZIP
 # CohortDiagnostics::preMergeDiagnosticsFiles(

@@ -1,0 +1,63 @@
+{
+  "PrimaryCriteria": {
+    "CriteriaList": [
+      {
+        "ConditionOccurrence": {
+          "CodesetId": 3,
+          "OccurrenceStartDate": {
+            "Value": "2020-01-01",
+            "Op": "gte"
+          }
+        }
+      }
+    ],
+    "ObservationWindow": {
+      "PriorDays": 0,
+      "PostDays": 0
+    },
+    "PrimaryCriteriaLimit": {
+      "Type": "First"
+    }
+  },
+  "ConceptSets": [
+    {
+      "id": 3,
+      "name": "Klinefelter_syndrome",
+      "expression": {
+        "items": [
+          {
+            "concept": {
+              "CONCEPT_ID": 40420291,
+              "CONCEPT_NAME": "",
+              "STANDARD_CONCEPT": null,
+              "STANDARD_CONCEPT_CAPTION": "Unknown",
+              "INVALID_REASON": null,
+              "INVALID_REASON_CAPTION": "Unknown",
+              "CONCEPT_CODE": "",
+              "DOMAIN_ID": "",
+              "VOCABULARY_ID": "",
+              "CONCEPT_CLASS_ID": ""
+            },
+            "isExcluded": false,
+            "includeDescendants": true,
+            "includeMapped": true
+          }
+        ]
+      }
+    }
+  ],
+  "QualifiedLimit": {
+    "Type": "First"
+  },
+  "ExpressionLimit": {
+    "Type": "First"
+  },
+  "InclusionRules": [],
+  "CensoringCriteria": [],
+  "CollapseSettings": {
+    "CollapseType": "ERA",
+    "EraPad": 0
+  },
+  "CensorWindow": {},
+  "cdmVersionRange": ">=5.0.0"
+}

@@ -1,0 +1,276 @@
+{
+  "PrimaryCriteria": {
+    "CriteriaList": [
+      {
+        "ConditionOccurrence": {
+          "CodesetId": 3,
+          "OccurrenceStartDate": {
+            "Value": "2020-01-01",
+            "Op": "gte"
+          }
+        }
+      }
+    ],
+    "ObservationWindow": {
+      "PriorDays": 0,
+      "PostDays": 0
+    },
+    "PrimaryCriteriaLimit": {
+      "Type": "First"
+    }
+  },
+  "ConceptSets": [
+    {
+      "id": 3,
+      "name": "Klinefelter_syndrome",
+      "expression": {
+        "items": [
+          {
+            "concept": {
+              "CONCEPT_ID": 40420291,
+              "CONCEPT_NAME": "",
+              "STANDARD_CONCEPT": null,
+              "STANDARD_CONCEPT_CAPTION": "Unknown",
+              "INVALID_REASON": null,
+              "INVALID_REASON_CAPTION": "Unknown",
+              "CONCEPT_CODE": "",
+              "DOMAIN_ID": "",
+              "VOCABULARY_ID": "",
+              "CONCEPT_CLASS_ID": ""
+            },
+            "isExcluded": false,
+            "includeDescendants": true,
+            "includeMapped": true
+          }
+        ]
+      }
+    },
+    {
+      "id": 5,
+      "name": "LH / Lutropin",
+      "expression": {
+        "items": [
+          {
+            "concept": {
+              "CONCEPT_ID": 3009214,
+              "CONCEPT_NAME": "Lutropin [Units/volume] in Serum or Plasma",
+              "STANDARD_CONCEPT": "S",
+              "STANDARD_CONCEPT_CAPTION": "Standard",
+              "INVALID_REASON": null,
+              "INVALID_REASON_CAPTION": "Unknown",
+              "CONCEPT_CODE": "10501-5",
+              "DOMAIN_ID": "Measurement",
+              "VOCABULARY_ID": "LOINC",
+              "CONCEPT_CLASS_ID": "Lab Test"
+            },
+            "isExcluded": false,
+            "includeDescendants": false,
+            "includeMapped": false
+          }
+        ]
+      }
+    },
+    {
+      "id": 4,
+      "name": "FSH / Follitropin",
+      "expression": {
+        "items": [
+          {
+            "concept": {
+              "CONCEPT_ID": 3023323,
+              "CONCEPT_NAME": "Follitropin [Units/volume] in Serum or Plasma",
+              "STANDARD_CONCEPT": "S",
+              "STANDARD_CONCEPT_CAPTION": "Standard",
+              "INVALID_REASON": null,
+              "INVALID_REASON_CAPTION": "Unknown",
+              "CONCEPT_CODE": "15067-2",
+              "DOMAIN_ID": "Measurement",
+              "VOCABULARY_ID": "LOINC",
+              "CONCEPT_CLASS_ID": "Lab Test"
+            },
+            "isExcluded": false,
+            "includeDescendants": false,
+            "includeMapped": false
+          }
+        ]
+      }
+    },
+    {
+      "id": 6,
+      "name": "Testosteron free",
+      "expression": {
+        "items": [
+          {
+            "concept": {
+              "CONCEPT_ID": 3018301,
+              "CONCEPT_NAME": "Testosterone Free [Moles/volume] in Serum or Plasma",
+              "STANDARD_CONCEPT": "S",
+              "STANDARD_CONCEPT_CAPTION": "Standard",
+              "INVALID_REASON": null,
+              "INVALID_REASON_CAPTION": "Unknown",
+              "CONCEPT_CODE": "14914-6",
+              "DOMAIN_ID": "Measurement",
+              "VOCABULARY_ID": "LOINC",
+              "CONCEPT_CLASS_ID": "Lab Test"
+            },
+            "isExcluded": false,
+            "includeDescendants": false,
+            "includeMapped": false
+          }
+        ]
+      }
+    },
+    {
+      "id": 8,
+      "name": "TRT",
+      "expression": {
+        "items": [
+          {
+            "concept": {
+              "CONCEPT_ID": 21602510,
+              "CONCEPT_NAME": "testosterone; oral, parenteral, rectal, sublingual, transdermal",
+              "STANDARD_CONCEPT": "C",
+              "STANDARD_CONCEPT_CAPTION": "Classification",
+              "INVALID_REASON": null,
+              "INVALID_REASON_CAPTION": "Unknown",
+              "CONCEPT_CODE": "G03BA03",
+              "DOMAIN_ID": "Drug",
+              "VOCABULARY_ID": "ATC",
+              "CONCEPT_CLASS_ID": "ATC 5th"
+            },
+            "isExcluded": false,
+            "includeDescendants": true,
+            "includeMapped": true
+          }
+        ]
+      }
+    }
+  ],
+  "QualifiedLimit": {
+    "Type": "First"
+  },
+  "ExpressionLimit": {
+    "Type": "First"
+  },
+  "InclusionRules": [
+    {
+      "expression": {
+        "Type": "AT_LEAST",
+        "Count": 1,
+        "CriteriaList": [
+          {
+            "Criteria": {
+              "Measurement": {
+                "CodesetId": 5,
+                "MeasurementTypeExclude": false
+              }
+            },
+            "StartWindow": {
+              "Start": {
+                "Coeff": -1
+              },
+              "End": {
+                "Coeff": 1
+              },
+              "UseIndexEnd": false,
+              "UseEventEnd": false
+            },
+            "RestrictVisit": false,
+            "IgnoreObservationPeriod": false,
+            "Occurrence": {
+              "Type": 1,
+              "Count": 1,
+              "IsDistinct": false,
+              "CountColumn": "DOMAIN_CONCEPT"
+            }
+          },
+          {
+            "Criteria": {
+              "Measurement": {
+                "CodesetId": 4,
+                "MeasurementTypeExclude": false
+              }
+            },
+            "StartWindow": {
+              "Start": {
+                "Coeff": -1
+              },
+              "End": {
+                "Coeff": 1
+              },
+              "UseIndexEnd": false,
+              "UseEventEnd": false
+            },
+            "RestrictVisit": false,
+            "IgnoreObservationPeriod": false,
+            "Occurrence": {
+              "Type": 1,
+              "Count": 1,
+              "IsDistinct": false
+            }
+          },
+          {
+            "Criteria": {
+              "Measurement": {
+                "CodesetId": 6,
+                "MeasurementTypeExclude": false
+              }
+            },
+            "StartWindow": {
+              "Start": {
+                "Coeff": -1
+              },
+              "End": {
+                "Coeff": 1
+              },
+              "UseIndexEnd": false,
+              "UseEventEnd": false
+            },
+            "RestrictVisit": false,
+            "IgnoreObservationPeriod": false,
+            "Occurrence": {
+              "Type": 1,
+              "Count": 1,
+              "IsDistinct": false
+            }
+          },
+          {
+            "Criteria": {
+              "DrugExposure": {
+                "CodesetId": 8,
+                "DrugTypeExclude": false
+              }
+            },
+            "StartWindow": {
+              "Start": {
+                "Coeff": -1
+              },
+              "End": {
+                "Coeff": 1
+              },
+              "UseIndexEnd": false,
+              "UseEventEnd": false
+            },
+            "RestrictVisit": false,
+            "IgnoreObservationPeriod": false,
+            "Occurrence": {
+              "Type": 1,
+              "Count": 1,
+              "IsDistinct": false
+            }
+          }
+        ],
+        "DemographicCriteriaList": [],
+        "Groups": []
+      },
+      "name": "has_lab_or_treatment_data"
+    }
+  ],
+  "CensoringCriteria": [],
+  "CollapseSettings": {
+    "CollapseType": "ERA",
+    "EraPad": 0
+  },
+  "CensorWindow": {},
+  "cdmVersionRange": ">=5.0.0"
+}
