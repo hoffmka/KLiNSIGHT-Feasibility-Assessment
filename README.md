@@ -1,6 +1,6 @@
-# INSiGHT-RD Feasibility Assessment
+# INSiGHT-RD Diagnostic package
 
-R study package for assessing data availability at OMOP CDM sites for the **KLiNSIGHT** (Klinefelter, 47,XXY) and **MAScINSIGHT** (Mosaic 45,X/46,XY / 47,XYY) studies.
+R diagnostic package for assessing data availability at OMOP CDM sites for the **KLiNSIGHT** (Klinefelter, 47,XXY) and **MAScINSIGHT** (Mosaic 45,X/46,XY / 47,XYY) studies.
 
 ---
 
@@ -66,7 +66,6 @@ All results are written to `output/` (gitignored). Counts below 5 are suppressed
 
 | File | Content |
 |------|---------|
-| `cohort_counts_<date>.csv` | Entry and subject counts |
 | `cohort_diagnostics/Results_<SITE_ID>.zip` | CohortDiagnostics export |
 | `diagnostics/INSiGHT_KLiNSIGHT_diagnostics.csv` | Automated plausibility checks |
 
