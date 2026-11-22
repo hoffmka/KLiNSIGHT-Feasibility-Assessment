@@ -81,24 +81,24 @@ print(results)
 # 5. Export results
 # ------------------------------------------------------------
 
-dateStamp <- format(Sys.Date(), "%Y-%m-%d")
-
-outputFile <- file.path(
-  cohortCountsDir,
-  paste0(
-    outputPrefix,
-    "_cohort_counts_",
-    dateStamp,
-    ".csv"
-  )
-)
-
-write.csv(
-  results,
-  outputFile,
-  row.names = FALSE,
-  na = ""
-)
+# dateStamp <- format(Sys.Date(), "%Y-%m-%d")
+# 
+# outputFile <- file.path(
+#   cohortCountsDir,
+#   paste0(
+#     outputPrefix,
+#     "_cohort_counts_",
+#     dateStamp,
+#     ".csv"
+#   )
+# )
+# 
+# write.csv(
+#   results,
+#   outputFile,
+#   row.names = FALSE,
+#   na = ""
+# )
 
 message("\nCohort counts completed.")
 message("Results saved to: ", outputFile)
