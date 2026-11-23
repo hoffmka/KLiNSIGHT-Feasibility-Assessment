@@ -225,6 +225,29 @@ meas <- getUnmappedMeasurements(cohortDefinitionId = 1L, minCount = 1L,
 drug <- getUnmappedDrugExposures(cohortDefinitionId = 1L, minCount = 1L,
                                  outputFile = file.path("output", "unmapped_drugs.csv"))
 
+
+# ============================================================
+# Cohort characterization (for study package)
+# ============================================================
+# characterizationDir <- file.path(
+#   outputDir,
+#   "characterization"
+# )
+# 
+# # Characterization selection
+# characterizationSettings <- list(
+#   ageGroups = TRUE,
+#   cohortEntryYear = TRUE
+# )
+# 
+# dir.create(
+#   characterizationDir,
+#   recursive = TRUE,
+#   showWarnings = FALSE
+# )
+# 
+# source("R/Characterization/00_RunCharacterization.R")
+
 # ============================================================
 # Close database connection
 # ============================================================
