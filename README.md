@@ -51,16 +51,16 @@ All outputs apply a **minimum cell count of 5**. Any count below this threshold 
 - **R ≥ 4.2**
 - A JDBC-compatible database driver for your CDM (PostgreSQL, SQL Server, etc.)
 
-Install the required R packages:
+All required packages are managed via [renv](https://rstudio.github.io/renv/). To install them:
 
 ```r
-install.packages("remotes")
-remotes::install_github("OHDSI/DatabaseConnector")
-remotes::install_github("OHDSI/CirceR")
-remotes::install_github("OHDSI/CohortGenerator")
-remotes::install_github("OHDSI/FeatureExtraction")
-remotes::install_github("OHDSI/CohortDiagnostics")
-remotes::install_github("OHDSI/OhdsiShinyModules")
+renv::restore()
+```
+
+This installs the exact package versions recorded in `renv.lock`. To view results locally in the Shiny explorer (optional), also install:
+
+```r
+renv::install("OHDSI/OhdsiShinyModules")
 ```
 
 A PostgreSQL JDBC driver is included in `jdbcDrivers/`. For other database systems, download the appropriate driver (run once):
